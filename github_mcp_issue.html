@@ -79,7 +79,7 @@
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
             backdrop-filter: blur(15px);
-            height: 420px;
+            height: 410px;
         }
         
         .nav-card::before {
@@ -484,15 +484,30 @@
                 // Replace with your actual URL for the attack flow page
                 window.open('attack-flow.html', '_blank');
             });
+
+            document.querySelector('.attack-flow').addEventListener('touchend', function() {
+                // Replace with your actual URL for the attack flow page
+                window.open('attack-flow.html', '_blank');
+            });
             
             // Security Comparison Card  
             document.querySelector('.security-comparison').addEventListener('click', function() {
                 // Replace with your actual URL for the security comparison page
                 window.open('security-comparison.html', '_blank');
             });
+
+             document.querySelector('.security-comparison').addEventListener('touchend', function() {
+                // Replace with your actual URL for the security comparison page
+                window.open('security-comparison.html', '_blank');
+            });
             
             // Risk Impact Card
             document.querySelector('.risk-impact').addEventListener('click', function() {
+                // Replace with your actual URL for the risk impact page
+                window.open('risk-impact.html', '_blank');
+            });
+
+            document.querySelector('.risk-impact').addEventListener('touchend', function() {
                 // Replace with your actual URL for the risk impact page
                 window.open('risk-impact.html', '_blank');
             });
