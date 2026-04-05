@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS SCS-C03 Domain 1 Detection</title>
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --paper: #fffdf8;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #e7dfd1;
+      --aws: #ff9900;
+      --aws-soft: #fff1d6;
+      --blue: #1f6feb;
+      --blue-soft: #eaf2ff;
+      --green: #18794e;
+      --green-soft: #e8f7ef;
+      --red: #b42318;
+      --red-soft: #fdecec;
+      --violet: #6f42c1;
+      --violet-soft: #f2ebff;
+      --shadow: 0 14px 34px rgba(31, 41, 55, 0.08);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(255, 153, 0, 0.12), transparent 24%),
+        radial-gradient(circle at top left, rgba(31, 111, 235, 0.10), transparent 22%),
+        var(--bg);
+      line-height: 1.55;
+    }
+
+    .wrap {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 28px 18px 56px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #fffaf2 0%, #fff 45%, #f7fbff 100%);
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -90px;
+      top: -90px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,153,0,0.18), transparent 65%);
+      pointer-events: none;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 920px;
+      color: var(--muted);
+      font-size: 1.04rem;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .chip.aws { background: var(--aws-soft); color: #8a4d00; }
+    .chip.blue { background: var(--blue-soft); color: #164ea6; }
+    .chip.green { background: var(--green-soft); color: #0f6b44; }
+
+    .section {
+      margin-top: 18px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+    }
+
+    .card h2, .card h3 {
+      margin-top: 0;
+      line-height: 1.15;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+
+    .e-aws { background: var(--aws-soft); color: #9a5a00; border-color: #ffd48a; }
+    .e-blue { background: var(--blue-soft); color: #144ea7; border-color: #cfe0ff; }
+    .e-green { background: var(--green-soft); color: #106943; border-color: #ccefdc; }
+    .e-red { background: var(--red-soft); color: var(--red); border-color: #f7c4c0; }
+    .e-violet { background: var(--violet-soft); color: #5e35b1; border-color: #ddcdfd; }
+
+    .service-title {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 1.15rem;
+      font-weight: 800;
+      background: var(--aws-soft);
+      color: #945500;
+      flex: 0 0 auto;
+    }
+
+    p { margin: 0 0 10px; }
+    ul { padding-left: 18px; margin: 10px 0 0; }
+    li + li { margin-top: 6px; }
+    .muted { color: var(--muted); }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .memory-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+
+    .memory-table th,
+    .memory-table td {
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    .memory-table th {
+      background: #fbf7ef;
+      font-size: 0.92rem;
+    }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .node {
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-weight: 700;
+      font-size: 0.94rem;
+    }
+
+    .arrow {
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .trap {
+      border-left: 4px solid var(--red);
+      padding-left: 12px;
+      margin-top: 12px;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 22px;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 940px) {
+      .grid-2, .grid-3, .mini-grid { grid-template-columns: 1fr; }
+      .hero { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow e-aws">AWS SCS-C03 Quick Revision</div>
+      <h1>Domain 1 — Detection</h1>
+      <p class="subtitle">A focused visual study sheet for <strong>Domain 1 only</strong>. This version uses a clean light study-board style rather than a resume-like theme, and it groups the services the same way exam questions usually test them: <strong>detect</strong>, <strong>aggregate</strong>, <strong>investigate</strong>, <strong>log</strong>, and <strong>query</strong>.</p>
+      <div class="chips">
+        <span class="chip aws">GuardDuty-first mindset</span>
+        <span class="chip blue">Security Hub aggregation</span>
+        <span class="chip green">CloudTrail + EventBridge automation</span>
+      </div>
+    </section>
+
+    <section class="section grid grid-3">
+      <article class="card">
+        <div class="eyebrow e-aws">Top priority</div>
+        <div class="service-title">
+          <div class="icon">🛡️</div>
+          <div>
+            <h3>Amazon GuardDuty</h3>
+            <p class="muted">Managed intelligent threat detection</p>
+          </div>
+        </div>
+        <ul>
+          <li>Best answer when the question asks for <strong>automatic threat detection with minimal setup</strong>.</li>
+          <li>Analyzes foundational sources such as <strong>CloudTrail management events, VPC Flow Logs, and Route 53 DNS query logs</strong>.</li>
+          <li>Detects compromised credentials, suspicious API calls, crypto-mining, malware-style behavior, and data exfiltration patterns.</li>
+          <li>Supports multi-account administration through AWS Organizations.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-blue">Central view</div>
+        <div class="service-title">
+          <div class="icon" style="background:var(--blue-soft);color:#144ea7;">📊</div>
+          <div>
+            <h3>AWS Security Hub</h3>
+            <p class="muted">Aggregate findings and security posture</p>
+          </div>
+        </div>
+        <ul>
+          <li>Use when the clue is <strong>centralize findings across accounts and Regions</strong>.</li>
+          <li>Aggregates findings from GuardDuty, Macie, Inspector, IAM Access Analyzer, Config, and partner tools.</li>
+          <li>Uses <strong>AWS Security Finding Format (ASFF)</strong>.</li>
+          <li>Needs <strong>AWS Config enabled</strong> for many checks and standards.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-violet">Investigate</div>
+        <div class="service-title">
+          <div class="icon" style="background:var(--violet-soft);color:#5e35b1;">🕵️</div>
+          <div>
+            <h3>Amazon Detective</h3>
+            <p class="muted">Root-cause investigation after findings</p>
+          </div>
+        </div>
+        <ul>
+          <li>Use after GuardDuty, Macie, or Security Hub finds something suspicious.</li>
+          <li>Helps answer: <strong>how did it happen, what was affected, what did the attacker do</strong>.</li>
+          <li>Builds a unified view using sources such as CloudTrail, VPC Flow Logs, and GuardDuty findings.</li>
+          <li>Think <strong>investigation</strong>, not first-line detection.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="section grid grid-2">
+      <article class="card">
+        <div class="eyebrow e-green">Logging and eventing</div>
+        <h2>Detection backbone</h2>
+        <div class="mini-grid">
+          <div class="mini">
+            <h3>CloudTrail</h3>
+            <p class="muted">Who did what in the AWS account.</p>
+            <ul>
+              <li>Management events are logged by default.</li>
+              <li>Data events are higher volume and not enabled by default.</li>
+              <li>Investigate CloudTrail first when resources are changed or deleted.</li>
+              <li>Default event history is 90 days unless you log to S3 or CloudTrail Lake.</li>
+            </ul>
+          </div>
+          <div class="mini">
+            <h3>CloudTrail Insights</h3>
+            <p class="muted">Anomaly detection on write management events.</p>
+            <ul>
+              <li>Detects unusual API activity patterns.</li>
+              <li>Useful for bursty IAM actions or unusual operational behavior.</li>
+              <li>Think unusual write activity, not full threat-detection replacement.</li>
+            </ul>
+          </div>
+          <div class="mini">
+            <h3>EventBridge</h3>
+            <p class="muted">Automation trigger layer.</p>
+            <ul>
+              <li>React to GuardDuty findings or CloudTrail events.</li>
+              <li>Common targets: SNS, Lambda, SQS, Step Functions.</li>
+              <li>Use for near-immediate workflows and remediation triggers.</li>
+            </ul>
+          </div>
+          <div class="mini">
+            <h3>CloudWatch</h3>
+            <p class="muted">Metrics, alarms, and log analytics.</p>
+            <ul>
+              <li>Best for alerting and operational monitoring.</li>
+              <li>Metric Filters can turn matching log patterns into metrics.</li>
+              <li>CloudWatch Alarms can alert on those metrics.</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-aws">Data, vulnerabilities, and network clues</div>
+        <h2>Supporting detection services</h2>
+        <div class="mini-grid">
+          <div class="mini">
+            <h3>Amazon Macie</h3>
+            <p>Use for <strong>sensitive data discovery in S3</strong>.</p>
+            <p class="muted">Finds PII, credentials, financial data, and policy issues in buckets.</p>
+          </div>
+          <div class="mini">
+            <h3>Amazon Inspector</h3>
+            <p>Use for <strong>vulnerability assessment</strong>.</p>
+            <p class="muted">Covers EC2, ECR container images, and Lambda packages.</p>
+          </div>
+          <div class="mini">
+            <h3>VPC Flow Logs</h3>
+            <p>Use to inspect <strong>network traffic patterns</strong>.</p>
+            <p class="muted">Good for port analysis, rejected traffic, and suspicious connectivity review.</p>
+          </div>
+          <div class="mini">
+            <h3>Route 53 Resolver Query Logging</h3>
+            <p>Use for <strong>DNS visibility</strong> inside VPCs.</p>
+            <p class="muted">Helpful for unusual query patterns and DNS investigation.</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="section grid grid-3">
+      <article class="card">
+        <div class="eyebrow e-green">CloudWatch must-know</div>
+        <h2>Logs, filters, alarms</h2>
+        <ul>
+          <li><strong>Logs Insights</strong> is for searching and analyzing log data already in CloudWatch Logs.</li>
+          <li><strong>Metric Filters</strong> extract patterns from logs and create CloudWatch metrics.</li>
+          <li><strong>CloudWatch Alarms</strong> notify or trigger actions when metrics breach thresholds.</li>
+          <li><strong>Contributor Insights</strong> shows top contributors such as top IPs, noisy hosts, or most common errors.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-blue">Real-time clue</div>
+        <h2>Subscription filters</h2>
+        <ul>
+          <li>Use <strong>CloudWatch Logs subscription filters</strong> for real-time or near-real-time processing.</li>
+          <li>Common destinations: Lambda, Kinesis Data Streams, Kinesis Data Firehose, OpenSearch.</li>
+          <li>For exam questions asking for streaming logs as they arrive, this is the answer over Athena exports.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-violet">Query-at-rest</div>
+        <h2>Athena</h2>
+        <ul>
+          <li>Best when logs are stored in <strong>S3</strong> and you need serverless SQL analysis.</li>
+          <li>Frequently used with CloudTrail logs, VPC Flow Logs, and other exported security data.</li>
+          <li>Remember: Athena is query-based, not a real-time alerting engine.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="section grid grid-2">
+      <article class="card">
+        <div class="eyebrow e-aws">GuardDuty advanced</div>
+        <h2>Features exam questions like</h2>
+        <ul>
+          <li><strong>Protection plans:</strong> S3 Protection, EKS Protection, Runtime Monitoring, Malware Protection for EC2, Lambda Protection, RDS Protection, Malware Protection for S3 and AWS Backup.</li>
+          <li><strong>Findings:</strong> severity levels, finding types, and sample findings for testing automation.</li>
+          <li><strong>Trusted IP list</strong> suppresses findings for known-good public IPs.</li>
+          <li><strong>Threat IP list</strong> generates findings for known-malicious public IPs.</li>
+          <li><strong>Suppression rules</strong> archive unwanted findings and keep dashboards cleaner.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-red">GuardDuty traps</div>
+        <h2>Easy-to-miss details</h2>
+        <ul>
+          <li>GuardDuty uses the <strong>default VPC DNS resolver</strong> for DNS-based findings.</li>
+          <li>Suppressed findings are not sent onward to services like Security Hub or EventBridge.</li>
+          <li>In multi-account setups, administrator accounts manage member findings, rules, trusted lists, and threat lists.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="section grid grid-3">
+      <article class="card">
+        <div class="eyebrow e-blue">Security Hub exam detail</div>
+        <h2>Must remember</h2>
+        <ul>
+          <li><strong>AWS Config must be enabled</strong> for many Security Hub checks.</li>
+          <li>Security Hub can aggregate across multiple Regions and accounts.</li>
+          <li>GuardDuty findings flow into Security Hub in <strong>ASFF</strong>.</li>
+          <li>Security Hub Insights group related findings for quicker review.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-violet">Detective exam detail</div>
+        <h2>Positioning</h2>
+        <ul>
+          <li>Detective is for <strong>triage, scoping, and investigation</strong>.</li>
+          <li>Use it after a finding to build a timeline and see affected entities.</li>
+          <li>Do not confuse it with first-line alerting.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-green">Network visibility</div>
+        <h2>Flow logs and DNS logs</h2>
+        <ul>
+          <li><strong>VPC Flow Logs</strong> help identify source IP, destination IP, ports, and ACCEPT/REJECT actions.</li>
+          <li><strong>Route 53 query logging</strong> supports DNS-level analysis.</li>
+          <li>Both commonly feed CloudWatch Logs, Athena, or downstream analytics.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="section grid grid-2">
+      <article class="card">
+        <div class="eyebrow e-blue">Exam patterns</div>
+        <h2>What the question is really asking</h2>
+        <div class="trap">
+          <strong>“Detect suspicious activity automatically across accounts.”</strong><br />
+          GuardDuty, often with delegated administrator setup.
+        </div>
+        <div class="trap">
+          <strong>“Centralize findings and compliance status.”</strong><br />
+          Security Hub, with Config enabled.
+        </div>
+        <div class="trap">
+          <strong>“Investigate the root cause of a finding.”</strong><br />
+          Detective.
+        </div>
+        <div class="trap">
+          <strong>“Track API activity / who changed something.”</strong><br />
+          CloudTrail.
+        </div>
+        <div class="trap">
+          <strong>“Send immediate notifications when certain events happen.”</strong><br />
+          EventBridge + SNS or Lambda.
+        </div>
+        <div class="trap">
+          <strong>“Find PII or sensitive data in S3.”</strong><br />
+          Macie.
+        </div>
+        <div class="trap">
+          <strong>“Identify vulnerabilities in workloads.”</strong><br />
+          Inspector.
+        </div>
+        <div class="trap">
+          <strong>“Top source IPs / top talkers / noisy contributors.”</strong><br />
+          CloudWatch Contributor Insights.
+        </div>
+        <div class="trap">
+          <strong>“Real-time processing of log events as they arrive.”</strong><br />
+          CloudWatch Logs subscription filter.
+        </div>
+        <div class="trap">
+          <strong>“Query logs stored in S3 with SQL.”</strong><br />
+          Athena.
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-red">Wrong-answer traps</div>
+        <h2>What AWS wants you not to confuse</h2>
+        <ul>
+          <li><strong>GuardDuty</strong> detects threats. <strong>Security Hub</strong> aggregates findings.</li>
+          <li><strong>Detective</strong> investigates. It does not generate first-line detections.</li>
+          <li><strong>CloudTrail</strong> records API activity. It is not a full managed threat detection service.</li>
+          <li><strong>Athena</strong> queries logs already stored in S3. It is not a streaming processor.</li>
+          <li><strong>CloudWatch Logs Insights</strong> searches logs. It is not the same as real-time subscription delivery.</li>
+          <li><strong>Macie</strong> is for sensitive data in S3. <strong>Inspector</strong> is for vulnerabilities.</li>
+          <li><strong>Contributor Insights</strong> is for top contributors and rankings, not broad threat-detection replacement.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="section card">
+      <div class="eyebrow e-green">Automation memory</div>
+      <h2>Fast recall workflows</h2>
+      <div class="flow">
+        <span class="node">GuardDuty finding</span>
+        <span class="arrow">→</span>
+        <span class="node">EventBridge rule</span>
+        <span class="arrow">→</span>
+        <span class="node">SNS / Lambda / Step Functions</span>
+      </div>
+      <div class="flow">
+        <span class="node">CloudTrail event</span>
+        <span class="arrow">→</span>
+        <span class="node">EventBridge</span>
+        <span class="arrow">→</span>
+        <span class="node">Alert or auto-remediation</span>
+      </div>
+      <div class="flow">
+        <span class="node">CloudTrail or VPC Flow Logs in S3</span>
+        <span class="arrow">→</span>
+        <span class="node">Athena</span>
+        <span class="arrow">→</span>
+        <span class="node">Serverless SQL investigation</span>
+      </div>
+      <div class="flow">
+        <span class="node">CloudWatch Logs</span>
+        <span class="arrow">→</span>
+        <span class="node">Logs Insights / Contributor Insights</span>
+        <span class="arrow">→</span>
+        <span class="node">Search and rank suspicious behavior</span>
+      </div>
+      <div class="flow">
+        <span class="node">CloudWatch Logs</span>
+        <span class="arrow">→</span>
+        <span class="node">Subscription Filter</span>
+        <span class="arrow">→</span>
+        <span class="node">Lambda / Kinesis / OpenSearch</span>
+      </div>
+    </section>
+
+    <section class="section card">
+      <div class="eyebrow e-aws">Memory table</div>
+      <h2>One-line mapping</h2>
+      <table class="memory-table">
+        <thead>
+          <tr>
+            <th>Need</th>
+            <th>Best service</th>
+            <th>Remember this</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Threat detection</td>
+            <td><strong>GuardDuty</strong></td>
+            <td>Minimal setup, managed findings, multi-account capable</td>
+          </tr>
+          <tr>
+            <td>Central findings dashboard</td>
+            <td><strong>Security Hub</strong></td>
+            <td>ASFF aggregation, standards, posture view, Config dependency</td>
+          </tr>
+          <tr>
+            <td>Root-cause investigation</td>
+            <td><strong>Detective</strong></td>
+            <td>Correlates entities and activity over time</td>
+          </tr>
+          <tr>
+            <td>API audit trail</td>
+            <td><strong>CloudTrail</strong></td>
+            <td>Who did what, when, and from where</td>
+          </tr>
+          <tr>
+            <td>API anomaly detection</td>
+            <td><strong>CloudTrail Insights</strong></td>
+            <td>Unusual write management-event patterns</td>
+          </tr>
+          <tr>
+            <td>Immediate workflow trigger</td>
+            <td><strong>EventBridge</strong></td>
+            <td>Route findings and events to actions</td>
+          </tr>
+          <tr>
+            <td>Search logs in CloudWatch</td>
+            <td><strong>Logs Insights</strong></td>
+            <td>Ad hoc queries over existing log groups</td>
+          </tr>
+          <tr>
+            <td>Real-time log fan-out</td>
+            <td><strong>Subscription Filter</strong></td>
+            <td>Stream matching logs to Lambda, Kinesis, Firehose</td>
+          </tr>
+          <tr>
+            <td>Top talkers / ranked contributors</td>
+            <td><strong>Contributor Insights</strong></td>
+            <td>Top IPs, most frequent errors, heavy users</td>
+          </tr>
+          <tr>
+            <td>S3 sensitive data discovery</td>
+            <td><strong>Macie</strong></td>
+            <td>PII, credentials, and data classification</td>
+          </tr>
+          <tr>
+            <td>Workload vulnerabilities</td>
+            <td><strong>Inspector</strong></td>
+            <td>EC2, ECR, Lambda vulnerability scanning</td>
+          </tr>
+          <tr>
+            <td>Network traffic evidence</td>
+            <td><strong>VPC Flow Logs</strong></td>
+            <td>Ports, IPs, accept/reject actions</td>
+          </tr>
+          <tr>
+            <td>SQL on security logs in S3</td>
+            <td><strong>Athena</strong></td>
+            <td>Best for serverless querying of stored logs</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section grid grid-2">
+      <article class="card">
+        <div class="eyebrow e-violet">Quick scenarios</div>
+        <h2>Practice yourself</h2>
+        <p><strong>Scenario 1:</strong> A company wants to detect unusual outbound traffic from EC2 instances across many AWS accounts and have a centralized security team review the findings.</p>
+        <p><strong>Best answer set:</strong> GuardDuty for detection, Security Hub for central aggregation, and EventBridge for alerting or automation.</p>
+        <p style="margin-top:12px;"><strong>Scenario 2:</strong> The team wants to find the top source IPs creating the most rejected traffic in CloudWatch Logs.</p>
+        <p><strong>Best answer:</strong> CloudWatch Contributor Insights.</p>
+        <p style="margin-top:12px;"><strong>Scenario 3:</strong> The team stores CloudTrail logs in S3 and wants SQL-based investigation.</p>
+        <p><strong>Best answer:</strong> Athena.</p>
+      </article>
+
+      <article class="card">
+        <div class="eyebrow e-green">Final shortcut</div>
+        <h2>30-second mental model</h2>
+        <p><strong>GuardDuty detects.</strong></p>
+        <p><strong>Security Hub collects.</strong></p>
+        <p><strong>Detective investigates.</strong></p>
+        <p><strong>CloudTrail records.</strong></p>
+        <p><strong>EventBridge reacts.</strong></p>
+      </article>
+    </section>
+
+    <p class="footer-note"><strong>Domain 1: Detection</strong></p>
+  </div>
+</body>
+</html>
