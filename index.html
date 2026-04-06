@@ -467,6 +467,48 @@
       .stat-grid { grid-template-columns: 1fr 1fr; }
       .nav-inner { border-radius: 24px; }
     }
+
+    .dropdown {
+      position: relative;
+    }
+
+    .dropdown-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: .25s ease;
+    }
+
+    .dropdown-btn:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: var(--line);
+    }
+
+    /* FIXED DROPDOWN */
+    .dropdown-content {
+      position: absolute;
+      top: 100%; /* instead of fixed px */
+      margin-top: 6px; /* small safe spacing */
+      right: 0;
+      background: rgba(10,18,32,0.95);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      display: none;
+      flex-direction: column;
+      min-width: 200px;
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      z-index: 100;
+    }
+
+    /* THIS LINE FIXES THE VANISH ISSUE */
+    .dropdown:hover .dropdown-content,
+    .dropdown-content:hover {
+      display: flex;
+    }
+
   </style>
 </head>
 <body>
@@ -482,6 +524,16 @@
         <a href="#talks">Talks</a>
         <a href="#awards">Awards</a>
         <a href="#contact">Contact</a>
+
+        <div class="dropdown">
+        <span class="dropdown-btn">Notes ▾</span>
+        <div class="dropdown-content">
+          <a href="https://zero0x00.github.io/github_mcp_issue.html#" target="_blank" rel="noreferrer noopener">GitHub MCP</a>
+          <a href="https://zero0x00.github.io/aws-security/detection.html#" target="_blank" rel="noreferrer noopener">AWS-Domain-Detection</a>
+          <a href="https://arif-playbook.gitbook.io/100-days-of-ai-sec/" target="_blank" rel="noreferrer noopener">AI Security Notes</a>
+          </div>
+      </div> 
+        
       </div>
     </div>
 
