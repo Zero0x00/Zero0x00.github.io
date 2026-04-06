@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attention Is All You Need - Beginner Guide</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --text:#1f2937; --muted:#5b6472;
+      --line:#dbe2ea; --accent:#2563eb; --accent2:#7c3aed; --good:#059669;
+      --soft:#eef4ff; --soft2:#f3e8ff; --soft3:#ecfdf5;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+    .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 60px}
+    .hero,.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 20px rgba(0,0,0,.04)}
+    .hero{padding:28px;margin-bottom:22px}
+    h1,h2,h3{margin:0 0 12px}
+    h1{font-size:2rem}
+    h2{font-size:1.45rem;margin-top:4px}
+    p,li{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+    .card{padding:20px}
+    .pill{display:inline-block;background:var(--soft);color:var(--accent);border:1px solid #cfe0ff;padding:6px 10px;border-radius:999px;font-size:.9rem;font-weight:700}
+    .diagram{background:#fbfdff;border:1px dashed #cbd5e1;border-radius:16px;padding:16px;margin:14px 0}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .box{background:var(--soft);border:1px solid #cfe0ff;border-radius:12px;padding:12px 14px;font-weight:700;color:#1d4ed8;min-width:90px;text-align:center}
+    .box.purple{background:var(--soft2);border-color:#e9d5ff;color:#6d28d9}
+    .box.green{background:var(--soft3);border-color:#bbf7d0;color:#047857}
+    .arrow{font-size:1.4rem;color:#94a3b8;font-weight:700}
+    .small{font-size:.93rem}
+    .legend{font-size:.92rem;background:#f8fafc;border-radius:12px;padding:10px 12px;border:1px solid var(--line)}
+    .stack{display:grid;gap:10px}
+    .layer{padding:12px;border-radius:12px;border:1px solid var(--line);background:#fafcff}
+    .token{display:inline-block;padding:8px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;margin:4px;font-weight:700;color:#4338ca}
+    .note{border-left:4px solid var(--accent);padding:10px 12px;background:#f8fbff;border-radius:10px}
+    ul{padding-left:18px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="pill">Beginner Friendly Visual Notes</span>
+      <h1>Attention Is All You Need</h1>
+      <p><strong>Simple idea:</strong> instead of reading words one by one like older models, the Transformer lets every word look at all the other words at the same time. This helps it understand meaning faster and better.</p>
+      <div class="note"><strong>Easy memory line:</strong> <em>Attention = “Which other words should I look at to understand this word?”</em></div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>1) Embeddings</h2>
+        <p>Computers cannot directly understand words. So each word becomes a list of numbers called an <strong>embedding</strong>.</p>
+        <div class="diagram">
+          <div class="row">
+            <div class="box">cat</div><div class="arrow">→</div>
+            <div class="box green">[0.2, 1.1, ...]</div>
+          </div>
+          <p class="small">Words with similar meaning get number patterns that are closer together.</p>
+        </div>
+        <ul>
+          <li>Word becomes numbers</li>
+          <li>Numbers keep meaning</li>
+          <li>Similar words end up closer</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>2) Positional Encoding</h2>
+        <p>Because the model reads everything in parallel, it also needs help to know the order of words.</p>
+        <div class="diagram">
+          <div class="row">
+            <div class="box">I</div>
+            <div class="box">love</div>
+            <div class="box">music</div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div class="box purple">Pos 1</div>
+            <div class="box purple">Pos 2</div>
+            <div class="box purple">Pos 3</div>
+          </div>
+        </div>
+        <p class="small">This is like attaching a seat number to each word.</p>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>3) Self-Attention</h2>
+      <p>Each word asks: <strong>“Which other words matter for understanding me?”</strong></p>
+      <div class="diagram">
+        <div class="row">
+          <span class="token">The</span>
+          <span class="token">animal</span>
+          <span class="token">didn't</span>
+          <span class="token">cross</span>
+          <span class="token">the</span>
+          <span class="token">road</span>
+          <span class="token">because</span>
+          <span class="token">it</span>
+          <span class="token">was</span>
+          <span class="token">tired</span>
+        </div>
+        <p class="small"><strong>Focus word:</strong> <span class="token">it</span></p>
+        <div class="row">
+          <div class="box">it</div><div class="arrow">looks at</div>
+          <div class="box green">animal</div>
+          <div class="box">road</div>
+          <div class="box">tired</div>
+        </div>
+        <p class="small">The model learns that <strong>“it”</strong> most likely refers to <strong>“animal”</strong>, not <strong>“road”</strong>.</p>
+      </div>
+      <div class="legend">
+        <strong>Easy idea:</strong> self-attention is like every word checking the whole sentence and deciding what deserves the most attention.
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>4) Multi-Head Attention</h2>
+      <p>Instead of looking in only one way, the model uses <strong>many attention heads</strong>. Each head notices different patterns.</p>
+      <div class="diagram">
+        <div class="row">
+          <div class="box">Sentence</div>
+          <div class="arrow">→</div>
+          <div class="stack" style="flex:1;min-width:260px">
+            <div class="layer"><strong>Head 1:</strong> grammar relationship</div>
+            <div class="layer"><strong>Head 2:</strong> meaning relationship</div>
+            <div class="layer"><strong>Head 3:</strong> long-distance connection</div>
+            <div class="layer"><strong>Head 4:</strong> important keywords</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="box purple">Combined view</div>
+        </div>
+      </div>
+      <p class="small">Like several people studying the same sentence, but each person looks for something different.</p>
+    </section>
+
+    <section class="grid" style="margin-top:18px">
+      <div class="card">
+        <h2>5) Encoder</h2>
+        <p>The <strong>encoder</strong> reads and understands the input sentence.</p>
+        <div class="diagram stack">
+          <div class="layer">Input words</div>
+          <div class="layer">Self-attention</div>
+          <div class="layer">Feed-forward layer</div>
+          <div class="layer">Better word understanding</div>
+        </div>
+        <p class="small">Think: <strong>Encoder = reader / understanding part</strong></p>
+      </div>
+
+      <div class="card">
+        <h2>6) Decoder</h2>
+        <p>The <strong>decoder</strong> writes the output one token at a time.</p>
+        <div class="diagram stack">
+          <div class="layer">Already generated words</div>
+          <div class="layer">Masked attention (cannot see future words)</div>
+          <div class="layer">Looks at encoder output</div>
+          <div class="layer">Predicts next word</div>
+        </div>
+        <p class="small">Think: <strong>Decoder = writer / response part</strong></p>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>7) Full Transformer Flow</h2>
+      <div class="diagram">
+        <div class="row" style="justify-content:center">
+          <div class="box">Input Text</div>
+          <div class="arrow">→</div>
+          <div class="box green">Embeddings + Position</div>
+          <div class="arrow">→</div>
+          <div class="box">Encoder Stack</div>
+          <div class="arrow">→</div>
+          <div class="box purple">Decoder Stack</div>
+          <div class="arrow">→</div>
+          <div class="box green">Output Text</div>
+        </div>
+      </div>
+      <ul>
+        <li>Input sentence goes in</li>
+        <li>Words become vectors with position info</li>
+        <li>Encoder understands the whole input</li>
+        <li>Decoder generates the answer or translation</li>
+      </ul>
+    </section>
+
+    <section class="grid" style="margin-top:18px">
+      <div class="card">
+        <h2>Why this paper mattered</h2>
+        <ul>
+          <li>Much faster training than older sequential models</li>
+          <li>Better at long-range relationships</li>
+          <li>Foundation of GPT, BERT, and modern LLMs</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Easy final memory</h2>
+        <ul>
+          <li><strong>Embedding</strong> = word into numbers</li>
+          <li><strong>Self-attention</strong> = what should this word look at?</li>
+          <li><strong>Multi-head</strong> = look in multiple ways</li>
+          <li><strong>Encoder</strong> = understands input</li>
+          <li><strong>Decoder</strong> = writes output</li>
+          <li><strong>Transformer</strong> = all these parts working together</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
