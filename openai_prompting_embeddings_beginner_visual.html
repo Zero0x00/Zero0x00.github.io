@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenAI Prompting and Embeddings - Beginner Guide</title>
+  <style>
+    :root{
+      --bg:#f7f9fc; --card:#fff; --text:#1f2937; --muted:#5f6b7a;
+      --line:#dbe3ec; --blue:#2563eb; --violet:#7c3aed; --green:#059669;
+      --soft:#eef4ff; --soft2:#f3e8ff; --soft3:#ecfdf5;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text);line-height:1.6}
+    .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 60px}
+    .hero,.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 20px rgba(0,0,0,.04)}
+    .hero{padding:28px;margin-bottom:22px}
+    .card{padding:20px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+    h1,h2,h3{margin:0 0 12px}
+    h1{font-size:2rem}
+    h2{font-size:1.4rem}
+    p,li{color:var(--muted)}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:var(--soft);border:1px solid #cfe0ff;color:var(--blue);font-weight:700;font-size:.9rem}
+    .diagram{background:#fbfdff;border:1px dashed #cbd5e1;border-radius:16px;padding:16px;margin:14px 0}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .box{padding:12px 14px;border-radius:12px;border:1px solid #cfe0ff;background:var(--soft);color:#1d4ed8;font-weight:700;text-align:center;min-width:90px}
+    .box.violet{background:var(--soft2);border-color:#e9d5ff;color:#6d28d9}
+    .box.green{background:var(--soft3);border-color:#bbf7d0;color:#047857}
+    .arrow{font-size:1.35rem;color:#94a3b8;font-weight:700}
+    .example{background:#0f172a;color:#e2e8f0;border-radius:14px;padding:14px;font-family:Consolas,monospace;font-size:.92rem;overflow:auto}
+    .small{font-size:.93rem}
+    ul{padding-left:18px}
+    .layer{padding:12px;border-radius:12px;border:1px solid var(--line);background:#fafcff}
+    .stack{display:grid;gap:10px}
+    .token{display:inline-block;margin:4px;padding:8px 10px;border-radius:999px;background:#eef2ff;border:1px solid #c7d2fe;color:#4338ca;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <span class="pill">Beginner Friendly Visual Notes</span>
+      <h1>OpenAI Docs: Prompting and Embeddings</h1>
+      <p>This page explains two big ideas in simple language:</p>
+      <ul>
+        <li><strong>Prompting</strong> = how you ask the model</li>
+        <li><strong>Embeddings</strong> = how text meaning is turned into numbers for search and matching</li>
+      </ul>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>1) Prompting</h2>
+        <p>A prompt is the instruction you give the AI. Better instructions usually give better results.</p>
+        <div class="diagram">
+          <div class="row">
+            <div class="box">Your request</div>
+            <div class="arrow">→</div>
+            <div class="box violet">Model thinks</div>
+            <div class="arrow">→</div>
+            <div class="box green">Answer</div>
+          </div>
+        </div>
+        <p class="small"><strong>Easy rule:</strong> clear input usually leads to clear output.</p>
+      </div>
+
+      <div class="card">
+        <h2>2) Good Prompt Formula</h2>
+        <div class="diagram stack">
+          <div class="layer"><strong>Role:</strong> who the model should act like</div>
+          <div class="layer"><strong>Task:</strong> what you want done</div>
+          <div class="layer"><strong>Context:</strong> useful background</div>
+          <div class="layer"><strong>Constraints:</strong> limits like length or format</div>
+        </div>
+        <p class="small">Think: <strong>Role + Task + Context + Constraints</strong></p>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>3) Bad Prompt vs Better Prompt</h2>
+      <div class="grid">
+        <div>
+          <h3>Weak prompt</h3>
+          <div class="example">Explain transformers</div>
+        </div>
+        <div>
+          <h3>Better prompt</h3>
+          <div class="example">Explain transformers in simple words for a beginner, using 5 bullet points and one real-life analogy.</div>
+        </div>
+      </div>
+      <ul>
+        <li>Better prompt gives audience, tone, length, and format</li>
+        <li>The model has less guessing to do</li>
+      </ul>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>4) Few-Shot Prompting</h2>
+      <p>You can show examples so the model copies the style.</p>
+      <div class="diagram">
+        <div class="row">
+          <div class="box">Example 1</div>
+          <div class="box">Example 2</div>
+          <div class="box">Example 3</div>
+          <div class="arrow">→</div>
+          <div class="box green">New answer in same style</div>
+        </div>
+      </div>
+      <p class="small">This is useful when you want a specific pattern, format, or tone.</p>
+    </section>
+
+    <section class="grid" style="margin-top:18px">
+      <div class="card">
+        <h2>5) Output Control</h2>
+        <p>You can tell the model exactly how to answer.</p>
+        <ul>
+          <li>Bullet points</li>
+          <li>JSON</li>
+          <li>Table</li>
+          <li>Short summary</li>
+          <li>Step-by-step answer</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>6) Why prompt quality matters</h2>
+        <ul>
+          <li>Reduces confusion</li>
+          <li>Reduces hallucination risk</li>
+          <li>Makes answers more useful</li>
+          <li>Helps keep output in the format you need</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>7) Embeddings</h2>
+      <p>Embeddings turn text into numbers so a machine can compare meaning.</p>
+      <div class="diagram">
+        <div class="row">
+          <div class="box">"dog"</div>
+          <div class="arrow">→</div>
+          <div class="box green">[0.82, -0.14, ...]</div>
+        </div>
+      </div>
+      <p class="small">Two pieces of text with similar meaning usually end up closer together in embedding space.</p>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>8) Visual: Similar meaning stays closer</h2>
+      <div class="diagram">
+        <div class="row">
+          <span class="token">dog</span>
+          <span class="token">puppy</span>
+          <span class="token">pet</span>
+          <span class="token">car</span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="box green">dog ↔ puppy = close</div>
+          <div class="box">dog ↔ car = far</div>
+        </div>
+      </div>
+      <p class="small">The machine uses distance between vectors to estimate similarity.</p>
+    </section>
+
+    <section class="card" style="margin-top:18px">
+      <h2>9) Embeddings in Search / RAG</h2>
+      <p>Embeddings are often used for semantic search and retrieval-augmented generation (RAG).</p>
+      <div class="diagram">
+        <div class="row" style="justify-content:center">
+          <div class="box">Documents</div>
+          <div class="arrow">→</div>
+          <div class="box violet">Chunk text</div>
+          <div class="arrow">→</div>
+          <div class="box green">Create embeddings</div>
+          <div class="arrow">→</div>
+          <div class="box">Store in vector DB</div>
+        </div>
+        <div class="row" style="justify-content:center;margin-top:10px">
+          <div class="box">User question</div>
+          <div class="arrow">→</div>
+          <div class="box green">Create embedding</div>
+          <div class="arrow">→</div>
+          <div class="box violet">Find nearest chunks</div>
+          <div class="arrow">→</div>
+          <div class="box">Send to LLM</div>
+        </div>
+      </div>
+      <ul>
+        <li><strong>Chunking</strong> = split documents into smaller pieces</li>
+        <li><strong>Vector DB</strong> = database built for similarity search</li>
+        <li><strong>Nearest chunks</strong> = most relevant pieces by meaning</li>
+      </ul>
+    </section>
+
+    <section class="grid" style="margin-top:18px">
+      <div class="card">
+        <h2>10) Prompting vs Embeddings</h2>
+        <div class="diagram stack">
+          <div class="layer"><strong>Prompting</strong> = how you ask</div>
+          <div class="layer"><strong>Embeddings</strong> = how text is represented for similarity</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Easy final memory</h2>
+        <ul>
+          <li><strong>Prompt</strong> = instruction</li>
+          <li><strong>Good prompt</strong> = clear + specific + structured</li>
+          <li><strong>Embedding</strong> = text turned into meaning-based numbers</li>
+          <li><strong>RAG</strong> = retrieve relevant info first, then answer</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
