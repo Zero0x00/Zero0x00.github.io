@@ -509,28 +509,91 @@
       border-color: var(--line);
     }
 
-    /* FIXED DROPDOWN */
-    .dropdown-content {
-      position: absolute;
-      top: 100%; /* instead of fixed px */
-      margin-top: 6px; /* small safe spacing */
-      right: 0;
-      background: rgba(10,18,32,0.95);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 10px;
-      display: none;
-      flex-direction: column;
-      min-width: 200px;
-      backdrop-filter: blur(12px);
-      box-shadow: var(--shadow);
-      z-index: 100;
+    /* Scoped only to dropdown to avoid breaking layout */
+    .dropdown {
+      position: relative;
     }
 
-    /* THIS LINE FIXES THE VANISH ISSUE */
-    .dropdown:hover .dropdown-content,
-    .dropdown-content:hover {
-      display: flex;
+    .dropdown-btn {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    /* Main dropdown */
+    .dropdown-content {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #111;
+      min-width: 240px;
+      border-radius: 10px;
+      padding: 8px 0;
+      z-index: 999;
+
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+    }
+
+    .dropdown.open .dropdown-content {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    /* Submenu */
+    .sub-dropdown {
+      position: relative;
+    }
+
+    .sub-dropdown-btn {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: #ccc;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+
+    .sub-dropdown-content {
+      position: absolute;
+      top: 0;
+      left: 100%;
+      background: #1a1a1a;
+      min-width: 220px;
+      border-radius: 10px;
+
+      opacity: 0;
+      transform: translateX(8px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+    }
+
+    .sub-dropdown.open .sub-dropdown-content {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    /* Links */
+    .dropdown-content a,
+    .sub-dropdown-content a {
+      display: block;
+      padding: 10px 16px;
+      color: #ccc;
+      text-decoration: none;
+    }
+
+    .dropdown-content a:hover,
+    .sub-dropdown-btn:hover,
+    .sub-dropdown-content a:hover {
+      background: #222;
+      color: #fff;
     }
 
   </style>
@@ -550,17 +613,41 @@
         <a href="#contact">Contact</a>
 
         <div class="dropdown">
-        <span class="dropdown-btn">Notes ▾</span>
-        <div class="dropdown-content">
-          <a href="https://zero0x00.github.io/github_mcp_issue.html#" target="_blank" rel="noreferrer noopener">GitHub MCP</a>
-          <a href="https://zero0x00.github.io/aws-security/detection.html#" target="_blank" rel="noreferrer noopener">AWS-Domain-Detection</a>
-          <a href="https://arif-playbook.gitbook.io/100-days-of-ai-sec/" target="_blank" rel="noreferrer noopener">AI Security Notes</a>
-          <a href="https://zero0x00.github.io/openai_prompting_embeddings.html" target="_blank" rel="noreferrer noopener">OpenAI Prompt & Embedding</a>
-          <a href="https://zero0x00.github.io/attention_is_all_you_need.html" target="_blank" rel="noreferrer noopener">Google Attention</a>
-          <a href="https://zero0x00.github.io/llm-security-starter.html" target="_blank" rel="noreferrer noopener">LLM Security Starter</a>
-          
+          <button class="dropdown-btn" aria-expanded="false">Notes ▾</button>
+
+          <div class="dropdown-content">
+
+            <!-- AWS -->
+            <div class="sub-dropdown">
+              <button class="sub-dropdown-btn">AWS Security ▸</button>
+              <div class="sub-dropdown-content">
+                <a href="https://zero0x00.github.io/aws-security/detection.html#" target="_blank" rel="noreferrer noopener">Domain Detection</a>
+                <a href="https://zero0x00.github.io/aws-security/detection/guardduty_study_guide.html" target="_blank" rel="noreferrer noopener">GuardDuty</a>
+              </div>
+            </div>
+
+            <!-- LLM -->
+            <div class="sub-dropdown">
+              <button class="sub-dropdown-btn">LLM Security ▸</button>
+              <div class="sub-dropdown-content">
+                <a href="https://zero0x00.github.io/llm-security-starter.html" target="_blank" rel="noreferrer noopener">LLM Security Starter</a>
+                <a href="https://zero0x00.github.io/openai_prompting_embeddings.html" target="_blank" rel="noreferrer noopener">Prompt & Embeddings</a>
+              </div>
+            </div>
+
+            <!-- MCP -->
+            <div class="sub-dropdown">
+              <button class="sub-dropdown-btn">MCP ▸</button>
+              <div class="sub-dropdown-content">
+                <a href="https://zero0x00.github.io/github_mcp_issue.html#" target="_blank" rel="noreferrer noopener">GitHub MCP</a>
+              </div>
+            </div>
+
+            <!-- Research -->
+            <a href="https://arif-playbook.gitbook.io/100-days-of-ai-sec/" target="_blank" rel="noreferrer noopener">AI Security Notes</a>
+
           </div>
-      </div> 
+        </div>
         
       </div>
     </div>
@@ -572,7 +659,7 @@
         <p class="lead">
           <p class="lead">
   Senior Product Security Engineer with 5+ years of experience securing modern products across web, API, mobile, cloud, and secure SDLC workflows. I am now extending that foundation into AI/ML security, with growing focus on adversarial ML, model abuse scenarios, and secure design for AI-enabled systems.
-</p>
+          </p>
         </p>
         <div class="hero-actions">
           <a class="button primary" href="mailto:mohammadarif1@toromail.csudh.edu">Let’s Connect</a>
@@ -803,5 +890,71 @@
 
     document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
   </script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const dropdown = document.querySelector(".dropdown");
+      if (!dropdown) return;
+
+      const dropdownBtn = dropdown.querySelector(".dropdown-btn");
+
+      // Toggle main dropdown
+      dropdownBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle("open");
+      });
+
+      // Submenus
+      dropdown.querySelectorAll(".sub-dropdown-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const parent = btn.parentElement;
+
+          // Close others
+          dropdown.querySelectorAll(".sub-dropdown").forEach(sd => {
+            if (sd !== parent) {
+              sd.classList.remove("open");
+
+              // Reset arrow of others
+              const otherBtn = sd.querySelector(".sub-dropdown-btn");
+              if (otherBtn) {
+                otherBtn.textContent = otherBtn.textContent.replace("▾", "▸");
+              }
+            }
+          });
+
+          // Toggle current
+          parent.classList.toggle("open");
+
+          // 🔥 Toggle arrow for current
+          if (parent.classList.contains("open")) {
+            btn.textContent = btn.textContent.replace("▸", "▾");
+          } else {
+            btn.textContent = btn.textContent.replace("▾", "▸");
+          }
+        });
+      });
+
+      // Close when clicking outside
+      document.addEventListener("click", () => {
+        dropdown.classList.remove("open");
+        dropdown.querySelectorAll(".sub-dropdown").forEach(sd => {
+          sd.classList.remove("open");
+        });
+      });
+
+      // ESC key support
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          dropdown.classList.remove("open");
+          dropdown.querySelectorAll(".sub-dropdown").forEach(sd => {
+            sd.classList.remove("open");
+          });
+        }
+      });
+
+    });
+</script>
+
 </body>
 </html>
