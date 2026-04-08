@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GuardDuty Study Guide | AWS Security Specialty</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #121932;
+      --panel-2: #18213f;
+      --text: #edf2ff;
+      --muted: #aab6da;
+      --accent: #67e8f9;
+      --accent-2: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --border: #2b3763;
+      --shadow: 0 20px 40px rgba(0,0,0,.28);
+      --radius: 18px;
+    }
+    .theme-light {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-2: #f1f5f9;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #0284c7;
+      --accent-2: #16a34a;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --border: #cbd5e1;
+      --shadow: 0 14px 28px rgba(15,23,42,.08);
+    }
+    .theme-paper {
+      --bg: #fffbea;
+      --panel: #fffdf5;
+      --panel-2: #fff7d6;
+      --text: #3b2f1a;
+      --muted: #6b5f46;
+      --accent: #0f766e;
+      --accent-2: #3f9c35;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --border: #e7d8a8;
+      --shadow: 0 14px 28px rgba(82,63,13,.08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle, rgba(120,120,120,.14) 1px, transparent 1.2px),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg) 94%, #08101d 6%) 0%, var(--bg) 100%);
+      background-size: 22px 22px, 100% 100%;
+    }
+    a { color: var(--accent); }
+    .container {
+      width: min(1150px, calc(100% - 24px));
+      margin: 0 auto;
+    }
+    .hero { padding: 38px 0 18px; }
+    .hero-card {
+      background: radial-gradient(circle at top right, rgba(103,232,249,.16), transparent 30%), linear-gradient(135deg, var(--panel), var(--panel-2));
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(103,232,249,.12);
+      color: var(--accent);
+      border: 1px solid rgba(103,232,249,.25);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(30px, 5vw, 52px);
+      line-height: 1.05;
+      margin: 14px 0 12px;
+    }
+    .subtitle {
+      color: var(--muted);
+      max-width: 840px;
+      font-size: 18px;
+      margin-bottom: 18px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+      color: #06101b;
+      border-color: transparent;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      backdrop-filter: blur(10px);
+      background: color-mix(in srgb, var(--bg) 80%, transparent);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+    }
+    .brand { font-weight: 800; letter-spacing: .02em; }
+    .nav { display: flex; flex-wrap: wrap; gap: 10px; }
+    .nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 10px;
+      border-radius: 10px;
+    }
+    .nav a:hover { background: rgba(255,255,255,.05); color: var(--text); }
+    section { padding: 24px 0; }
+    .section-title {
+      font-size: clamp(24px, 3vw, 34px);
+      margin: 0 0 6px;
+    }
+    .section-subtitle { color: var(--muted); margin: 0 0 18px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+    .card {
+      grid-column: span 12;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .card h3 { margin: 0 0 10px; font-size: 20px; }
+    .muted { color: var(--muted); }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(103,232,249,.1);
+      color: var(--accent);
+      border: 1px solid rgba(103,232,249,.2);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .comparison {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+    .comparison th, .comparison td {
+      padding: 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      vertical-align: top;
+    }
+    .comparison th { background: rgba(255,255,255,.04); color: var(--accent); }
+    .comparison tr:last-child td { border-bottom: 0; }
+    details {
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    details + details { margin-top: 12px; }
+    summary { cursor: pointer; font-weight: 800; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    .severity-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .sev {
+      border-radius: 18px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .sev .score {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .sev.critical .score { background: rgba(239,68,68,.16); color: #fca5a5; }
+    .sev.high .score { background: rgba(245,158,11,.16); color: #fcd34d; }
+    .sev.medium .score { background: rgba(34,197,94,.16); color: #86efac; }
+    .sev.low .score { background: rgba(103,232,249,.16); color: #a5f3fc; }
+    .sev ul { padding-left: 18px; margin: 8px 0 0; }
+    .danger-box, .info-box {
+      padding: 16px 18px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      margin-top: 14px;
+    }
+    .danger-box { background: rgba(239,68,68,.08); }
+    .info-box { background: rgba(34,197,94,.08); }
+    .timeline { display: grid; gap: 12px; }
+    .step {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+    .step-num {
+      width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+      background: rgba(103,232,249,.12); color: var(--accent); font-weight: 900;
+      border: 1px solid rgba(103,232,249,.18);
+    }
+    .kbd {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-bottom-width: 3px;
+      border-radius: 8px;
+      background: #0f1730;
+      font-size: 12px;
+    }
+    .flash-wrap {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .flash {
+      perspective: 1000px;
+      min-height: 190px;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+    }
+    .flash-inner {
+      position: relative;
+      width: 100%;
+      min-height: 190px;
+      transition: transform .6s;
+      transform-style: preserve-3d;
+    }
+    .flash.flipped .flash-inner { transform: rotateY(180deg); }
+    .flash-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      background: linear-gradient(180deg, var(--panel), var(--panel-2));
+      box-shadow: var(--shadow);
+      text-align: left;
+      color: var(--text);
+    }
+    .flash-back { transform: rotateY(180deg); }
+    .checklist label {
+      display: flex;
+      gap: 10px;
+      align-items: start;
+      padding: 10px 0;
+      border-bottom: 1px dashed rgba(255,255,255,.08);
+    }
+    .checklist label:last-child { border-bottom: 0; }
+    footer { padding: 32px 0 60px; color: var(--muted); font-size: 14px; }
+    @media (min-width: 760px) {
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+      .span-8 { grid-column: span 8; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">GuardDuty Revision Guide</div>
+      <nav class="nav">
+        <a href="#core">Core</a>
+        <a href="#plans">Plans</a>
+        <a href="#severity">Severity</a>
+        <a href="#extended">Extended Detection</a>
+        <a href="#response">Response</a>
+        <a href="#flashcards">Flashcards</a>
+        <a href="#refs">Refs</a>
+      </nav>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="container">
+      <div class="hero-card">
+        <span class="eyebrow">AWS Security Specialty · Domain 1 Detection</span>
+        <h1>Amazon GuardDuty + Extended Threat Detection</h1>
+        <p class="subtitle">An interactive study guide built for fast revision, concept clarity, and exam recall. This page is designed to help you remember what GuardDuty sees, what each protection plan adds, how finding severity works, and how Extended Threat Detection connects weak signals into attack sequences.</p>
+        <div class="pill-row">
+          <span class="pill">Foundational Sources</span>
+          <span class="pill">Protection Plans</span>
+          <span class="pill">Finding Severity</span>
+          <span class="pill">Extended Threat Detection</span>
+          <span class="pill">EventBridge Automation</span>
+          <span class="pill">Amazon Detective</span>
+        </div>
+        <div class="hero-actions">
+          <a class="btn primary" href="#severity">Jump to Severity Guide</a>
+          <button class="btn" id="expandAll" type="button">Expand all notes</button>
+          <button class="btn" id="collapseAll" type="button">Collapse all notes</button>
+          <button class="btn" id="themeDark" type="button">Dark</button>
+          <button class="btn" id="themeLight" type="button">Light</button>
+          <button class="btn" id="themePaper" type="button">Pale Yellow</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="core">
+      <h2 class="section-title">1) Core idea you must remember</h2>
+      <p class="section-subtitle">Think of GuardDuty as AWS-native threat detection. It does not block, patch, or remediate by itself. It detects suspicious behavior and raises findings.</p>
+      <div class="grid">
+        <div class="card span-6">
+          <h3>What GuardDuty does</h3>
+          <ul>
+            <li>Analyzes AWS telemetry for signs of compromise.</li>
+            <li>Detects credential misuse, suspicious API behavior, crypto mining, malicious network communication, reconnaissance, and service-specific threats.</li>
+            <li>Raises findings with severity so you can triage faster.</li>
+          </ul>
+        </div>
+        <div class="card span-6">
+          <h3>What GuardDuty does not do</h3>
+          <ul>
+            <li>It does <strong>not</strong> act like a firewall.</li>
+            <li>It does <strong>not</strong> auto-remediate by default.</li>
+            <li>It does <strong>not</strong> replace incident response or forensics.</li>
+          </ul>
+          <div class="info-box"><strong>Exam shortcut:</strong> GuardDuty detects. EventBridge, Lambda, Step Functions, isolation playbooks, and investigators respond.</div>
+        </div>
+        <div class="card span-8">
+          <h3>Foundational data sources that GuardDuty analyzes automatically</h3>
+          <table class="comparison">
+            <thead>
+              <tr><th>Source</th><th>What it helps detect</th><th>Exam memory hook</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>CloudTrail management events</td><td>API abuse, credential misuse, unusual control plane behavior</td><td>Who did what in the account?</td></tr>
+              <tr><td>VPC Flow Logs</td><td>Network anomalies, suspicious connections, crypto mining, command-and-control traffic</td><td>Who talked to whom?</td></tr>
+              <tr><td>Route 53 Resolver DNS query logs</td><td>Calls to suspicious or malicious domains</td><td>What names are being resolved?</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card span-4">
+          <h3>Fast recall</h3>
+          <p class="muted">If the exam asks which telemetry GuardDuty starts with by default, the answer is always this trio:</p>
+          <div class="pill-row">
+            <span class="pill">CloudTrail</span>
+            <span class="pill">VPC Flow Logs</span>
+            <span class="pill">Route 53 DNS</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="plans">
+      <h2 class="section-title">2) Protection plans and what each one adds</h2>
+      <p class="section-subtitle">Foundational detection is broad. Protection plans give GuardDuty deeper, service-specific visibility.</p>
+      <div class="grid">
+        <div class="card">
+          <table class="comparison">
+            <thead>
+              <tr><th>Protection plan</th><th>What it monitors</th><th>Key exam point</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>S3 Protection</td><td>S3 object-level API activity through CloudTrail data events</td><td>Not access logs; think object API actions.</td></tr>
+              <tr><td>Lambda Protection</td><td>Lambda network activity</td><td>Focus on network behavior, not code scanning.</td></tr>
+              <tr><td>RDS Protection</td><td>RDS login activity</td><td>Designed for anomalous login behavior.</td></tr>
+              <tr><td>EKS Protection</td><td>Kubernetes audit logs / control plane activity</td><td>Control plane visibility.</td></tr>
+              <tr><td>Runtime Monitoring</td><td>OS and runtime events like file access, process execution, network connections</td><td>Agent-based deep visibility.</td></tr>
+              <tr><td>Malware Protection for EC2</td><td>Agentless malware scans of EBS volumes</td><td>Triggered when malware-related findings occur, and can also be on-demand.</td></tr>
+              <tr><td>Malware Protection for S3</td><td>Scans newly uploaded objects in configured buckets</td><td>Can be used independently.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card span-6">
+          <h3>Common confusion: foundational vs runtime</h3>
+          <details open>
+            <summary>Foundational detection</summary>
+            <p>Uses CloudTrail management events, VPC Flow Logs, and Route 53 Resolver DNS query logs. Good for control plane, network, and DNS-level suspicious activity.</p>
+          </details>
+          <details>
+            <summary>Runtime Monitoring</summary>
+            <p>Looks much deeper into what the workload is doing: files touched, processes started, command line activity, and runtime connections. This is where OS-level visibility lives.</p>
+          </details>
+          <div class="danger-box"><strong>Exam shortcut:</strong> If a question mentions processes, file access, command lines, or OS-level events, think <strong>Runtime Monitoring</strong>.</div>
+        </div>
+        <div class="card span-6">
+          <h3>Best-practice pairing for EKS</h3>
+          <p>For stronger EKS coverage, enable both:</p>
+          <ul>
+            <li><strong>EKS Protection</strong> for audit logs and control plane actions.</li>
+            <li><strong>Runtime Monitoring</strong> for container and node-level behavior.</li>
+          </ul>
+          <div class="info-box"><strong>Exam shortcut:</strong> EKS audit logs alone are not full workload visibility. Runtime alone is not full control plane visibility. Together they give better coverage.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="severity">
+      <h2 class="section-title">3) Finding criticality and what to do next</h2>
+      <p class="section-subtitle">This is one of the most exam-relevant topics. Learn the numeric ranges, the meaning of each severity level, and the recommended response priority.</p>
+      <div class="severity-grid">
+        <article class="sev critical">
+          <div class="score">Critical · 9.0 - 10.0</div>
+          <h3>Attack sequence may be in progress or just happened</h3>
+          <p>A critical severity finding means one or more AWS resources may already be compromised or are actively being compromised. Examples include IAM sign-in credentials or S3 buckets that appear involved in a larger attack sequence.</p>
+          <ul>
+            <li>Usually tied to high-confidence, multi-stage compromise.</li>
+            <li>Often indicates escalation risk and urgent business impact.</li>
+            <li>GuardDuty recommends you prioritize triage and remediation immediately.</li>
+            <li>These issues can be part of ransomware progression and can escalate quickly.</li>
+          </ul>
+          <div class="danger-box"><strong>Think like the exam:</strong> Critical means potential ransomware path, attack progression, or recent successful compromise. Treat it first.</div>
+        </article>
+        <article class="sev high">
+          <div class="score">High · 7.0 - 8.9</div>
+          <h3>Resource is likely compromised and actively misused</h3>
+          <p>A high severity finding means the resource, such as an EC2 instance or IAM credentials, is compromised and currently being used for unauthorized purposes.</p>
+          <ul>
+            <li>Immediate remediation is recommended.</li>
+            <li>Examples: isolate or clean the EC2 instance, terminate it if needed, rotate IAM credentials.</li>
+            <li>The situation is serious, but the finding is about the impacted resource rather than a full correlated attack sequence.</li>
+          </ul>
+        </article>
+        <article class="sev medium">
+          <div class="score">Medium · 4.0 - 6.9</div>
+          <h3>Suspicious behavior that may indicate compromise</h3>
+          <p>Medium severity means the activity is abnormal and worth investigating. It may be legitimate for your environment, or it may be the early sign of compromise.</p>
+          <ul>
+            <li>Check if a legitimate user installed software or changed behavior.</li>
+            <li>Check if security groups or other control plane settings changed.</li>
+            <li>Run anti-malware or host inspection on the resource when appropriate.</li>
+            <li>Review attached IAM permissions and rotate credentials if needed.</li>
+            <li>If you cannot confirm the behavior is authorized, treat the resource as compromised.</li>
+          </ul>
+          <div class="info-box"><strong>Exam mindset:</strong> Medium does not mean safe. It means investigate and confirm whether it matches normal business behavior.</div>
+        </article>
+        <article class="sev low">
+          <div class="score">Low · 1.0 - 3.9</div>
+          <h3>Attempted suspicious activity, but no compromise</h3>
+          <p>Low severity usually means GuardDuty saw attempted suspicious behavior that did not successfully compromise your environment, such as a port scan or a failed intrusion attempt.</p>
+          <ul>
+            <li>No immediate remediation is usually required.</li>
+            <li>Still useful as reconnaissance signal.</li>
+            <li>Can matter later if it becomes part of a larger pattern.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="grid" style="margin-top:16px;">
+        <div class="card span-8">
+          <h3>How to think about severity on the exam</h3>
+          <table class="comparison">
+            <thead>
+              <tr><th>Severity</th><th>Meaning in plain language</th><th>Typical action priority</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Critical</td><td>Active or very recent multi-stage compromise may be happening now.</td><td>Immediate triage and remediation.</td></tr>
+              <tr><td>High</td><td>A resource is likely compromised and being misused.</td><td>Immediate action.</td></tr>
+              <tr><td>Medium</td><td>Something abnormal is happening and could be compromise.</td><td>Investigate quickly and verify legitimacy.</td></tr>
+              <tr><td>Low</td><td>Suspicious attempt or reconnaissance without successful compromise.</td><td>Monitor, document, correlate.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card span-4">
+          <h3>Must-remember rules</h3>
+          <p><strong>Attack sequence findings are Critical.</strong></p>
+          <p class="muted">If the question mentions Extended Threat Detection correlating multiple signals into an attack sequence, expect the finding to be Critical severity.</p>
+          <p><strong>High</strong> usually means the resource is actively being used without authorization.</p>
+          <p><strong>Medium</strong> means confirm whether the behavior is normal before you downgrade concern.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="extended">
+      <h2 class="section-title">4) Extended Threat Detection</h2>
+      <p class="section-subtitle">This is GuardDuty’s correlation engine. Instead of looking at a single event in isolation, it connects multiple signals across services and time.</p>
+      <div class="grid">
+        <div class="card span-6">
+          <h3>What it is designed to find</h3>
+          <ul>
+            <li>Multi-stage attacks that span data sources, resource types, and time.</li>
+            <li>Correlated behaviors rather than single isolated anomalies.</li>
+            <li>Attack sequences that may involve IAM, EC2, EKS, ECS, or S3-related compromise patterns.</li>
+          </ul>
+          <div class="info-box"><strong>Memory hook:</strong> Standard GuardDuty finds suspicious events. Extended Threat Detection finds the story those events tell together.</div>
+        </div>
+        <div class="card span-6">
+          <h3>Weak signals</h3>
+          <p>A weak signal is an activity that may look harmless by itself, but becomes suspicious when combined with other actions.</p>
+          <ul>
+            <li>One unusual API call may not trigger a major finding.</li>
+            <li>Several related actions across time can reveal reconnaissance, privilege escalation, or data compromise.</li>
+          </ul>
+          <div class="danger-box"><strong>Exam shortcut:</strong> Weak signal alone may not matter. Weak signals + findings + time correlation = attack sequence.</div>
+        </div>
+        <div class="card span-8">
+          <h3>24-hour rolling time window</h3>
+          <p>Extended Threat Detection uses a rolling time window to identify sequences of activity that suggest an in-progress or recent attack. This matters because sophisticated attacks do not always happen in one moment.</p>
+          <div class="timeline">
+            <div class="step"><div class="step-num">1</div><div><strong>Reconnaissance:</strong> suspicious listing or discovery actions.</div></div>
+            <div class="step"><div class="step-num">2</div><div><strong>Access or privilege change:</strong> credentials or permissions shift in a risky way.</div></div>
+            <div class="step"><div class="step-num">3</div><div><strong>Impact:</strong> resource misuse, data access, or workload abuse appears.</div></div>
+          </div>
+        </div>
+        <div class="card span-4">
+          <h3>Scope reminder</h3>
+          <p>Extended Threat Detection correlates signals <strong>within a single AWS account</strong>. It does <strong>not</strong> correlate activity across multiple AWS accounts or across an AWS Organization as one combined attack graph.</p>
+          <div class="danger-box"><strong>Exam shortcut:</strong> Organizations help centralize management and visibility, but Extended Threat Detection still evaluates each account independently.</div>
+        </div>
+        <div class="card span-4">
+          <h3>Suppression rule impact</h3>
+          <p>Archived findings created by suppression rules are not considered in attack sequence correlation.</p>
+          <p class="muted">That means noisy suppression rules can hide signals that might have helped identify a bigger attack pattern.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="response">
+      <h2 class="section-title">5) Response, investigation, and exports</h2>
+      <p class="section-subtitle">GuardDuty alerts. Your automation and investigation tooling does the rest.</p>
+      <div class="grid">
+        <div class="card span-6">
+          <h3>Automation pattern</h3>
+          <div class="timeline">
+            <div class="step"><div class="step-num">1</div><div>GuardDuty generates a finding.</div></div>
+            <div class="step"><div class="step-num">2</div><div>Amazon EventBridge matches the finding event.</div></div>
+            <div class="step"><div class="step-num">3</div><div>Lambda, Step Functions, SNS, or other targets start the response flow.</div></div>
+          </div>
+          <div class="danger-box"><strong>Exam trap:</strong> GuardDuty does not directly invoke Lambda as the main concept. EventBridge is the routing service you should think of.</div>
+        </div>
+        <div class="card span-6">
+          <h3>Investigation tool</h3>
+          <p>Use <strong>Amazon Detective</strong> to investigate GuardDuty findings and perform deeper root cause analysis.</p>
+          <ul>
+            <li>Good for timeline reconstruction.</li>
+            <li>Good for following entities and relationships.</li>
+            <li>Useful after triage to understand blast radius.</li>
+          </ul>
+        </div>
+        <div class="card span-6">
+          <h3>Configuration setup to remember</h3>
+          <ul>
+            <li>GuardDuty is enabled per Region.</li>
+            <li>For multi-account environments, use AWS Organizations with a delegated administrator.</li>
+            <li>Enable the protection plans you actually need, such as S3 Protection, EKS Protection, Runtime Monitoring, Lambda Protection, or RDS Protection.</li>
+            <li>Centralized administration helps operations, but Extended Threat Detection still correlates activity only inside one account.</li>
+          </ul>
+        </div>
+        <div class="card span-6">
+          <h3>Multi-account management</h3>
+          <p>In AWS Organizations, the recommended pattern is to use a <strong>delegated GuardDuty administrator account</strong> for centralized management across member accounts.</p>
+        </div>
+        <div class="card span-6">
+          <h3>Finding export</h3>
+          <p>GuardDuty findings can be exported to Amazon S3 in near real time and encrypted with AWS KMS.</p>
+          <ul>
+            <li>Helps with longer retention.</li>
+            <li>Useful for SIEM ingestion.</li>
+            <li>Useful for centralized analysis workflows.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="flashcards">
+      <h2 class="section-title">6) Flip-card revision</h2>
+      <p class="section-subtitle">Tap any card to flip it. This is useful for last-day recall practice.</p>
+      <div class="flash-wrap">
+        <button class="flash" type="button">
+          <div class="flash-inner">
+            <div class="flash-face"><h3>Foundational sources</h3><p>What three data sources does GuardDuty analyze automatically?</p></div>
+            <div class="flash-face flash-back"><h3>Answer</h3><p>CloudTrail management events, VPC Flow Logs, and Route 53 Resolver DNS query logs.</p></div>
+          </div>
+        </button>
+        <button class="flash" type="button">
+          <div class="flash-inner">
+            <div class="flash-face"><h3>Runtime Monitoring</h3><p>When should you think of Runtime Monitoring?</p></div>
+            <div class="flash-face flash-back"><h3>Answer</h3><p>When the question mentions OS-level events, process execution, file access, command lines, or deeper runtime behavior.</p></div>
+          </div>
+        </button>
+        <button class="flash" type="button">
+          <div class="flash-inner">
+            <div class="flash-face"><h3>Criticality</h3><p>What does Critical severity mean?</p></div>
+            <div class="flash-face flash-back"><h3>Answer</h3><p>9.0 to 10.0. Attack sequence may be in progress or recently happened. Prioritize triage and remediation immediately.</p></div>
+          </div>
+        </button>
+        <button class="flash" type="button">
+          <div class="flash-inner">
+            <div class="flash-face"><h3>Account scope</h3><p>Does Extended Threat Detection correlate across AWS Organizations?</p></div>
+            <div class="flash-face flash-back"><h3>Answer</h3><p>No. It correlates signals within a single AWS account. Organizations help centralize management, not cross-account correlation.</p></div>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">7) Final exam checklist</h2>
+      <p class="section-subtitle">Use this before ending your revision session.</p>
+      <div class="card checklist">
+        <label><input type="checkbox" /> I can name the three foundational data sources without looking.</label>
+        <label><input type="checkbox" /> I know the difference between foundational detection and Runtime Monitoring.</label>
+        <label><input type="checkbox" /> I know that S3 Protection uses CloudTrail data events.</label>
+        <label><input type="checkbox" /> I know EventBridge is the main automation path for findings.</label>
+        <label><input type="checkbox" /> I can explain Low, Medium, High, and Critical in plain language.</label>
+        <label><input type="checkbox" /> I remember that attack sequence findings are Critical.</label>
+        <label><input type="checkbox" /> I know Extended Threat Detection works within one AWS account.</label>
+        <label><input type="checkbox" /> I know Amazon Detective is for investigation.</label>
+        <label><input type="checkbox" /> I know delegated administrator is the recommended multi-account setup.</label>
+      </div>
+    </section>
+
+    <section id="refs">
+      <h2 class="section-title">8) Official AWS documentation links</h2>
+      <p class="section-subtitle">These are useful to keep in your GitHub page as a reference section.</p>
+      <div class="card">
+        <ul>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_data-sources.html" target="_blank" rel="noopener">GuardDuty foundational data sources</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/s3-protection.html" target="_blank" rel="noopener">GuardDuty S3 Protection</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/runtime-monitoring.html" target="_blank" rel="noopener">GuardDuty Runtime Monitoring</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/malware-protection.html" target="_blank" rel="noopener">GuardDuty Malware Protection for EC2</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/rds-protection.html" target="_blank" rel="noopener">GuardDuty RDS Protection</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/lambda-protection.html" target="_blank" rel="noopener">GuardDuty Lambda Protection</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/delegated-admin-designate.html" target="_blank" rel="noopener">Designating a delegated GuardDuty administrator</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_upload-lists.html" target="_blank" rel="noopener">Trusted IP lists and threat lists</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_findings_eventbridge.html" target="_blank" rel="noopener">Processing findings with EventBridge</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/findings_suppression-rule.html" target="_blank" rel="noopener">Suppression rules</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty-pricing.html" target="_blank" rel="noopener">GuardDuty pricing and trial details</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/gdu-malware-protection-s3.html" target="_blank" rel="noopener">Malware Protection for S3</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_findings-severity.html" target="_blank" rel="noopener">GuardDuty findings severity levels</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/what-is-guardduty.html" target="_blank" rel="noopener">What is Amazon GuardDuty?</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty-extended-threat-detection.html" target="_blank" rel="noopener">Extended Threat Detection overview</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty-attack-sequence-finding-types.html" target="_blank" rel="noopener">Attack sequence finding types</a></li>
+          <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_settingup.html" target="_blank" rel="noopener">Exporting findings and setup</a></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+    </div>
+  </footer>
+
+  <script>
+    document.querySelectorAll('.flash').forEach(card => {
+      card.addEventListener('click', () => card.classList.toggle('flipped'));
+    });
+
+    const expandBtn = document.getElementById('expandAll');
+    const collapseBtn = document.getElementById('collapseAll');
+
+    if (expandBtn) {
+      expandBtn.addEventListener('click', () => {
+        document.querySelectorAll('details').forEach(d => { d.open = true; });
+      });
+    }
+
+    if (collapseBtn) {
+      collapseBtn.addEventListener('click', () => {
+        document.querySelectorAll('details').forEach(d => { d.open = false; });
+      });
+    }
+
+    const setTheme = (name) => {
+      document.body.classList.remove('theme-light', 'theme-paper');
+      if (name === 'light') document.body.classList.add('theme-light');
+      if (name === 'paper') document.body.classList.add('theme-paper');
+      localStorage.setItem('gd-theme', name);
+    };
+
+    document.getElementById('themeDark')?.addEventListener('click', () => setTheme('dark'));
+    document.getElementById('themeLight')?.addEventListener('click', () => setTheme('light'));
+    document.getElementById('themePaper')?.addEventListener('click', () => setTheme('paper'));
+
+    const savedTheme = localStorage.getItem('gd-theme');
+    if (savedTheme === 'light' || savedTheme === 'paper') {
+      setTheme(savedTheme);
+    }
+  </script>
+</body>
+</html>
