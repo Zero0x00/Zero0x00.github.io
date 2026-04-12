@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security Hub Study Guide | AWS SCS-C03</title>
+<style>
+:root {
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --nav-h: 58px;
+  --sidebar-w: 248px;
+  --font-ui: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --shadow: 0 18px 36px rgba(0,0,0,.16);
+}
+[data-theme="dark"] {
+  --bg:#0b1020; --surface:#121932; --surface2:#18213f; --surface3:#1f294b;
+  --border:#2b3763; --border2:#40508c;
+  --text:#edf2ff; --text-m:#aab6da; --text-d:#7280a7;
+  --accent:#67e8f9; --accent2:#22c55e; --accent3:#f59e0b;
+  --tip-bg:rgba(34,197,94,.10); --tip-b:rgba(34,197,94,.25); --tip-t:#86efac;
+  --trap-bg:rgba(239,68,68,.10); --trap-b:rgba(239,68,68,.25); --trap-t:#fca5a5;
+  --warn-bg:rgba(245,158,11,.10); --warn-b:rgba(245,158,11,.25); --warn-t:#fcd34d;
+  --info-bg:rgba(103,232,249,.10); --info-b:rgba(103,232,249,.22); --info-t:#a5f3fc;
+  --scroll-th:#364579;
+}
+[data-theme="light"] {
+  --bg:#f8fafc; --surface:#ffffff; --surface2:#f1f5f9; --surface3:#e8eef6;
+  --border:#cbd5e1; --border2:#94a3b8;
+  --text:#0f172a; --text-m:#475569; --text-d:#94a3b8;
+  --accent:#0284c7; --accent2:#16a34a; --accent3:#d97706;
+  --tip-bg:#dcfce7; --tip-b:#86efac; --tip-t:#166534;
+  --trap-bg:#fee2e2; --trap-b:#fca5a5; --trap-t:#991b1b;
+  --warn-bg:#fef3c7; --warn-b:#fcd34d; --warn-t:#92400e;
+  --info-bg:#e0f2fe; --info-b:#7dd3fc; --info-t:#075985;
+  --scroll-th:#cbd5e1;
+}
+[data-theme="pale"] {
+  --bg:#fffbea; --surface:#fffdf5; --surface2:#fff7d6; --surface3:#f7efd0;
+  --border:#e7d8a8; --border2:#cbb980;
+  --text:#3b2f1a; --text-m:#6b5f46; --text-d:#a28f62;
+  --accent:#0f766e; --accent2:#3f9c35; --accent3:#b45309;
+  --tip-bg:#e8f5e0; --tip-b:#8db87a; --tip-t:#2d5a1e;
+  --trap-bg:#fce8e4; --trap-b:#d98a7a; --trap-t:#7a2010;
+  --warn-bg:#fef4cc; --warn-b:#c89830; --warn-t:#5a3800;
+  --info-bg:#e0eef8; --info-b:#7aaad4; --info-t:#1a4a7a;
+  --scroll-th:#c8bd9c;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{overflow-x:hidden}
+.sec,.main,.sec-body,.hero,.tw,.cards-grid,.refs-grid,.layout,.sidebar{min-width:0}
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(circle, rgba(120,120,120,.14) 1px, transparent 1.2px),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 94%, #08101d 6%) 0%, var(--bg) 100%);
+  background-size:22px 22px,100% 100%;
+  color:var(--text);
+  font-family:var(--font-ui);
+  line-height:1.65;
+  min-height:100vh;
+  transition:background .25s,color .25s;
+}
+a{color:var(--accent)}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--scroll-th);border-radius:999px}
+::-webkit-scrollbar-track{background:transparent}
+::selection{background:rgba(103,232,249,.22)}
+.topnav{
+  position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:400;
+  display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.menu-btn{
+  display:none;border:1px solid var(--border);background:var(--surface2);color:var(--text);
+  border-radius:10px;padding:8px 10px;font-size:14px;cursor:pointer
+}
+.nav-brand{
+  font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);white-space:nowrap;padding-right:12px;border-right:1px solid var(--border);flex-shrink:0
+}
+.nav-links{display:flex;gap:4px;overflow-x:auto;flex:1;scrollbar-width:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{
+  color:var(--text-m);text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap;
+  padding:8px 10px;border-radius:10px;transition:all .15s
+}
+.nav-links a:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.theme-sw{
+  display:flex;gap:4px;padding:4px;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;flex-shrink:0
+}
+.th-btn{
+  background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--font-ui);
+  padding:6px 10px;border-radius:8px;color:var(--text-m);transition:all .15s
+}
+.th-btn:hover{color:var(--text);background:var(--surface2)}
+.th-btn.active{background:var(--text);color:var(--bg)}
+.layout{display:grid;grid-template-columns:var(--sidebar-w) 1fr;margin-top:var(--nav-h)}
+.sidebar{
+  position:sticky;top:var(--nav-h);height:calc(100vh - var(--nav-h));overflow-y:auto;
+  padding:20px 12px 28px;border-right:1px solid var(--border);background:var(--surface)
+}
+.sg-label{
+  font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text-d);padding:14px 0 6px 6px
+}
+.sg-label:first-child{padding-top:0}
+.sl{
+  display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;
+  text-decoration:none;font-size:13px;font-weight:600;color:var(--text-m);transition:all .15s;line-height:1.35
+}
+.sl:hover{color:var(--text);background:var(--surface2)}
+.sl.active{color:var(--accent);background:rgba(103,232,249,.10)}
+.sl .sn{font-size:10px;color:var(--text-d);min-width:18px;font-weight:800}
+.main{min-width:0;padding:38px 32px 88px;max-width:1180px;width:100%}
+.hero{
+  margin-bottom:28px;padding:28px;border:1px solid var(--border);border-radius:28px;
+  background:radial-gradient(circle at top right, rgba(103,232,249,.16), transparent 30%), linear-gradient(135deg, var(--surface), var(--surface2));
+  box-shadow:var(--shadow)
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;background:rgba(103,232,249,.12);border:1px solid rgba(103,232,249,.25);
+  color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:999px;margin-bottom:14px
+}
+.hero h1{font-size:clamp(30px,5vw,52px);line-height:1.05;letter-spacing:-.02em;margin-bottom:12px}
+.hero h1 em{color:var(--accent);font-style:normal}
+.hero-desc{color:var(--text-m);font-size:18px;max-width:720px;margin-bottom:18px}
+.hero-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-width:920px}
+.stat-chip{
+  background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:8px 14px;
+  font-size:13px;font-weight:600;color:var(--text-m)
+}
+.stat-chip strong{color:var(--text)}
+.gl{
+  font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-d);
+  padding:4px 0;border-bottom:1px solid var(--border);margin:26px 0 12px
+}
+.ctrl-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.ctrl-btn{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 14px;
+  font-size:13px;font-weight:700;font-family:var(--font-ui);color:var(--text-m);cursor:pointer;transition:all .15s
+}
+.ctrl-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+.sec{
+  background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+  border:1px solid var(--border);border-radius:18px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)
+}
+.sec:hover{border-color:var(--border2)}
+.sec.open{border-color:var(--border2)}
+.sec-hd{
+  display:grid;grid-template-columns:40px 28px 1fr 28px;align-items:center;gap:10px;
+  padding:16px 18px;cursor:pointer;user-select:none
+}
+.sec-hd:hover .sec-tog{background:var(--surface3)}
+.sec-num{font-size:11px;font-weight:800;color:var(--text-d);letter-spacing:.08em}
+.sec-icon{font-size:18px;line-height:1}
+.sec-title{font-weight:800;font-size:20px;color:var(--text);letter-spacing:-.01em}
+.sec-tog{
+  width:24px;height:24px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;transition:background .15s
+}
+.sec-tog svg{width:11px;height:11px;fill:none;stroke:var(--text-m);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+.sec.open .sec-tog svg{transform:rotate(90deg)}
+.sec-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border)}
+.sec.open .sec-body{display:block}
+.sec-body p,.sec-body li{color:var(--text-m);font-size:15px}
+.sec-body ul{padding-left:20px;margin-top:10px}
+.sec-body li{margin-bottom:6px}
+.sec-body strong{color:var(--text);font-weight:700}
+.sec-body p{margin-top:10px}
+.callout{
+  display:flex;gap:10px;padding:14px 16px;border-radius:16px;margin-top:14px;font-size:14px;font-weight:600;line-height:1.65;align-items:flex-start
+}
+.ci{font-size:16px;flex-shrink:0;margin-top:1px}
+.callout.tip{background:var(--tip-bg);border:1px solid var(--tip-b);color:var(--tip-t)}
+.callout.trap{background:var(--trap-bg);border:1px solid var(--trap-b);color:var(--trap-t)}
+.callout.warn{background:var(--warn-bg);border:1px solid var(--warn-b);color:var(--warn-t)}
+.callout.info{background:var(--info-bg);border:1px solid var(--info-b);color:var(--info-t)}
+.tw{overflow-x:auto;margin-top:14px;border-radius:14px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{
+  background:rgba(255,255,255,.04);color:var(--accent);text-align:left;padding:12px 14px;
+  font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border)
+}
+td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text-m);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.03)}
+td strong{color:var(--text)}
+.badge{
+  display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;
+  text-transform:uppercase;border:1px solid transparent;white-space:nowrap
+}
+[data-theme="dark"] .b-red{background:rgba(239,68,68,.16);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+[data-theme="dark"] .b-orng{background:rgba(245,158,11,.16);color:#fcd34d;border-color:rgba(245,158,11,.3)}
+[data-theme="dark"] .b-yel{background:rgba(234,179,8,.16);color:#fde68a;border-color:rgba(234,179,8,.3)}
+[data-theme="dark"] .b-blue{background:rgba(103,232,249,.12);color:#a5f3fc;border-color:rgba(103,232,249,.25)}
+[data-theme="dark"] .b-grn{background:rgba(34,197,94,.14);color:#86efac;border-color:rgba(34,197,94,.25)}
+[data-theme="dark"] .b-purp{background:rgba(168,85,247,.16);color:#d8b4fe;border-color:rgba(168,85,247,.25)}
+[data-theme="light"] .b-red{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+[data-theme="light"] .b-orng{background:#fef3c7;color:#92400e;border-color:#fcd34d}
+[data-theme="light"] .b-yel{background:#fef9c3;color:#854d0e;border-color:#fde68a}
+[data-theme="light"] .b-blue{background:#e0f2fe;color:#075985;border-color:#7dd3fc}
+[data-theme="light"] .b-grn{background:#dcfce7;color:#166534;border-color:#86efac}
+[data-theme="light"] .b-purp{background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe}
+[data-theme="pale"] .b-red{background:#fce8e4;color:#7a2010;border-color:#d98a7a}
+[data-theme="pale"] .b-orng{background:#fef4cc;color:#5a3800;border-color:#c89830}
+[data-theme="pale"] .b-yel{background:#fff2b8;color:#725400;border-color:#dec25f}
+[data-theme="pale"] .b-blue{background:#e0eef8;color:#1a4a7a;border-color:#7aaad4}
+[data-theme="pale"] .b-grn{background:#e8f5e0;color:#2d5a1e;border-color:#8db87a}
+[data-theme="pale"] .b-purp{background:#f0eaf8;color:#4a2880;border-color:#b8a0d8}
+
+.sec-title,
+td, th,
+.flip-q, .flip-a,
+.chk-text,
+.ref-a {
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+code{
+  font-size:12px;background:var(--surface2);border:1px solid var(--border);padding:2px 6px;border-radius:8px;color:var(--accent)
+}
+.flow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:14px}
+.fn{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;
+  font-size:12px;font-weight:800;color:var(--accent)
+}
+.fa{color:var(--text-d);font-size:13px;padding:0 2px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
+.flip-card{height:180px;perspective:800px;cursor:pointer}
+.flip-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;transition:transform .4s cubic-bezier(.4,0,.2,1)}
+.flip-card.flipped .flip-inner{transform:rotateY(180deg)}
+.flip-f,.flip-b{
+  position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;padding:18px;display:flex;flex-direction:column;
+  border:1px solid var(--border);background:linear-gradient(180deg,var(--surface),var(--surface2));box-shadow:var(--shadow)
+}
+.flip-b{border-color:var(--info-b);transform:rotateY(180deg)}
+.flip-lbl{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-d);margin-bottom:8px}
+.flip-q{font-weight:800;font-size:16px;color:var(--text);line-height:1.4;flex:1}
+.flip-a{font-size:14px;color:var(--info-t);line-height:1.6;flex:1}
+.flip-hint{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-d);margin-top:auto;padding-top:8px}
+.prog-wrap{display:flex;align-items:center;gap:10px;margin:14px 0}
+.prog-lbl{font-size:11px;font-weight:800;color:var(--text-d);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.prog-track{flex:1;height:6px;background:var(--border);border-radius:999px;overflow:hidden}
+.prog-fill{height:100%;background:var(--accent2);border-radius:999px;width:0;transition:width .35s ease}
+.prog-count{font-size:13px;font-weight:800;color:var(--accent2);white-space:nowrap}
+.checklist{display:flex;flex-direction:column;gap:8px}
+.chk{
+  display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);
+  background:var(--surface);cursor:pointer;transition:all .15s
+}
+.chk:hover{border-color:var(--border2);background:var(--surface2)}
+.chk.done{background:var(--tip-bg);border-color:var(--tip-b)}
+.chk-box{
+  width:18px;height:18px;border:1.5px solid var(--border2);border-radius:5px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:2px;font-size:10px;font-weight:800;transition:all .15s;color:transparent
+}
+.chk.done .chk-box{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.chk-text{font-size:14px;color:var(--text-m);line-height:1.55}
+.chk.done .chk-text{color:var(--tip-t)}
+.refs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+.ref-a{
+  display:flex;align-items:center;gap:8px;padding:11px 12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;color:var(--info-t);text-decoration:none;font-size:13px;font-weight:600;transition:all .15s;line-height:1.35
+}
+.ref-a:hover{border-color:var(--info-b);background:var(--info-bg)}
+.ref-a svg{flex-shrink:0;width:12px;height:12px;opacity:.7}
+.overlay{
+  display:none;position:fixed;inset:0;background:rgba(2,6,23,.55);z-index:250
+}
+@media(max-width:900px){
+  .menu-btn{display:block}
+  .layout{grid-template-columns:1fr}
+  .sidebar{
+    position:fixed;left:0;top:var(--nav-h);bottom:0;height:auto;width:min(84vw,310px);z-index:320;
+    transform:translateX(-100%);transition:transform .25s ease;border-right:1px solid var(--border);box-shadow:var(--shadow)
+  }
+  .sidebar.open{transform:translateX(0)}
+  .overlay.show{display:block}
+  .main{max-width:none;padding:22px 14px 72px}
+  .hero{padding:22px}
+  .hero-desc{font-size:16px}
+  .sec-title{font-size:18px}
+}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.compact-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;padding-left:20px}
+.compact-list li{margin-bottom:2px}
+@media(min-width:1400px){
+  .layout{grid-template-columns:260px 1fr}
+  .main{max-width:1280px}
+  .hero{padding:32px}
+  .hero-desc{max-width:840px}
+  .cards-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .refs-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:1180px){
+  .layout{grid-template-columns:220px 1fr}
+  .main{padding:30px 24px 80px;max-width:100%}
+  .hero-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  .hero-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .two-col{grid-template-columns:1fr}
+  .compact-list{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .topnav{padding:0 10px
+
+  .cards-grid,
+  .refs-grid,
+  .two-col,
+  .compact-list,
+  .hero-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ctrl-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ctrl-btn {
+    width: 100%;
+  }
+
+}
+  .nav-brand{font-size:12px;padding-right:8px}
+  .theme-sw{gap:2px;padding:3px}
+  .th-btn{font-size:11px;padding:5px 8px}
+  .hero{padding:18px}
+  .hero h1{font-size:clamp(28px,8vw,40px)}
+  .hero-desc{font-size:15px}
+  .hero-stats{grid-template-columns:1fr 1fr}
+  .stat-chip{padding:7px 10px;font-size:12px}
+  .sec-hd{grid-template-columns:34px 24px 1fr 24px;padding:14px}
+  .sec-title{font-size:17px}
+  .sec-body{padding:0 14px 14px}
+  .sec-body p,.sec-body li{font-size:14px}
+  th,td{padding:10px 11px}
+  .cards-grid,.refs-grid{grid-template-columns:1fr}
+}
+
+
+@media(max-width:480px){
+  .sec-hd{
+    grid-template-columns:24px 20px 1fr 20px;
+    gap:6px;
+    padding:12px;
+    align-items:start;
+  }
+
+  .sec-body{
+    padding:0 12px 12px;
+  }
+}
+
+footer{
+  text-align:center;padding:26px;color:var(--text-d);font-size:11px;border-top:1px solid var(--border);letter-spacing:.04em
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+  <span class="nav-brand">SCS-C03</span>
+  <div class="nav-links">
+    <a href="#foundation">Foundation</a>
+    <a href="#findings">Findings</a>
+    <a href="#compliance">Compliance</a>
+    <a href="#operations">Operations</a>
+    <a href="#integrations">Integrations</a>
+    <a href="#advanced">Advanced</a>
+    <a href="#flashcards">Flashcards</a>
+    <a href="#checklist">Checklist</a>
+    <a href="#refs">Refs</a>
+  </div>
+  <div class="theme-sw">
+    <button class="th-btn active" onclick="setTheme('dark',this)">Dark</button>
+    <button class="th-btn" onclick="setTheme('light',this)">Light</button>
+    <button class="th-btn" onclick="setTheme('pale',this)">Pale</button>
+  </div>
+</nav>
+
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+  <p class="sg-label">Foundation</p>
+  <a class="sl" href="#s1"><span class="sn">01</span> Core Mission</a>
+  <a class="sl" href="#s2"><span class="sn">02</span> Architecture</a>
+  <a class="sl" href="#s3"><span class="sn">03</span> ASFF &amp; Data</a>
+  <p class="sg-label">Findings</p>
+  <a class="sl" href="#s4"><span class="sn">04</span> Workflow Status</a>
+  <a class="sl" href="#s5"><span class="sn">05</span> Severity Levels</a>
+  <p class="sg-label">Compliance</p>
+  <a class="sl" href="#s6"><span class="sn">06</span> Standards &amp; Config</a>
+  <a class="sl" href="#s7"><span class="sn">07</span> Security Score</a>
+  <p class="sg-label">Operations</p>
+  <a class="sl" href="#s8"><span class="sn">08</span> Cross-Region</a>
+  <a class="sl" href="#s9"><span class="sn">09</span> Automation</a>
+  <a class="sl" href="#s10"><span class="sn">10</span> Insights</a>
+  <p class="sg-label">Integrations &amp; Cost</p>
+  <a class="sl" href="#s11"><span class="sn">11</span> Integrations</a>
+  <a class="sl" href="#s12"><span class="sn">12</span> Pricing</a>
+  <p class="sg-label">Advanced</p>
+  <a class="sl" href="#s13"><span class="sn">13</span> Advanced API</a>
+  <a class="sl" href="#s14"><span class="sn">14</span> What Hub Won't Do</a>
+  <p class="sg-label">Study Tools</p>
+  <a class="sl" href="#traps"><span class="sn">TT</span> Top 10 Traps</a>
+  <a class="sl" href="#flashcards"><span class="sn">FC</span> Flashcards</a>
+  <a class="sl" href="#checklist"><span class="sn">CL</span> Exam Checklist</a>
+  <a class="sl" href="#refs"><span class="sn">RF</span> AWS Docs</a>
+</aside>
+
+<main class="main">
+  <header class="hero">
+    <div class="hero-badge">AWS Security Specialty · Domain 1 · Detection</div>
+    <h1>Amazon <em>Security Hub</em><br>Study Guide</h1>
+    <p class="hero-desc">A complete SCS-C03 reference with GuardDuty-matched typography and a stronger revision workflow — architecture, ASFF, compliance standards, multi-account setup, automation, cross-Region aggregation, exam traps, and cram mode.</p>
+    <div class="hero-stats">
+      <span class="stat-chip"><strong>14</strong> sections</span>
+      <span class="stat-chip"><strong>10</strong> exam traps</span>
+      <span class="stat-chip"><strong>8</strong> flip cards</span>
+      <span class="stat-chip"><strong>14</strong> checklist items</span>
+      <span class="stat-chip">3 reading modes</span>
+    </div>
+  </header>
+
+  <div class="ctrl-bar">
+    <button class="ctrl-btn" onclick="expandAll()">Expand all</button>
+    <button class="ctrl-btn" onclick="collapseAll()">Collapse all</button>
+    <button class="ctrl-btn" onclick="lastDayCramMode()">Last-day cram mode</button>
+  </div>
+
+  <h2 class="gl" id="traps">Top 10 exam traps</h2>
+  <section class="sec open">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">TT</span><span class="sec-icon">⚠️</span>
+      <span class="sec-title">Top 10 Security Hub traps to memorize</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <div class="tw"><table>
+        <thead><tr><th>Trap</th><th>Correct memory</th></tr></thead>
+        <tbody>
+          <tr><td>“Security Hub reads CloudTrail directly.”</td><td>No. GuardDuty and Config analyze telemetry, then send findings.</td></tr>
+          <tr><td>“Security Hub can remediate by itself.”</td><td>No. Use EventBridge plus Lambda, SSM, or Step Functions.</td></tr>
+          <tr><td>“Security Hub invokes Lambda directly.”</td><td>No. EventBridge is the intermediary.</td></tr>
+          <tr><td>“SUPPRESSED means fixed.”</td><td>No. It hides the finding from active scoring and workflow.</td></tr>
+          <tr><td>“Automation rules replicate across Regions.”</td><td>No. They do not replicate in cross-Region aggregation.</td></tr>
+          <tr><td>“Any account can set the delegated admin.”</td><td>No. The management account assigns it.</td></tr>
+          <tr><td>“Security score counts everything.”</td><td>No. NOT_AVAILABLE and SUPPRESSED do not count against the score.</td></tr>
+          <tr><td>“ASFF and OCSF are the same thing.”</td><td>No. ASFF is Security Hub format; OCSF is common schema for exports like Security Lake.</td></tr>
+          <tr><td>“Cross-Region aggregation costs extra.”</td><td>No. Replication itself does not add cost.</td></tr>
+          <tr><td>“AWS Config is optional for compliance scoring.”</td><td>No. Config is required for compliance checks and score generation.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <h2 class="gl" id="foundation">Foundation</h2>
+
+  <section id="s1"><div class="sec open">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">01</span><span class="sec-icon">🧠</span>
+      <span class="sec-title">Core Mission — The Big Picture</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul class="compact-list">
+        <li><strong>Centralized Aggregator:</strong> Collects findings from AWS services like GuardDuty, Inspector, and Macie, plus supported third-party tools.</li>
+        <li><strong>Compliance Engine:</strong> Checks AWS resources against standards like FSBP, CIS, NIST, and PCI DSS.</li>
+        <li><strong>Normalization:</strong> Converts findings into one standard structure called <strong>ASFF</strong>.</li>
+        <li><strong>Prioritization:</strong> Uses severity, workflow, and compliance state so teams can triage faster.</li>
+      </ul>
+      <div class="callout tip"><span class="ci">💡</span><span><strong>Exam shortcut:</strong> “Single pane of glass for security findings and compliance posture” almost always means Security Hub.</span></div>
+    </div>
+  </div></section>
+
+  <section id="s2"><div class="sec open">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">02</span><span class="sec-icon">🏗️</span>
+      <span class="sec-title">Architecture &amp; Multi-Account (AWS Organizations)</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul class="compact-list">
+        <li><strong>Delegated Administrator:</strong> Must be assigned by the Organizations management account.</li>
+        <li><strong>Central Configuration:</strong> The delegated admin can push configuration policies across accounts and Regions.</li>
+        <li><strong>Auto-enable behavior:</strong> New accounts can be automatically brought under Security Hub governance.</li>
+        <li><strong>Member accounts:</strong> Cannot override centrally managed policies the way they can local settings.</li>
+      </ul>
+      <div class="tw"><table>
+        <thead><tr><th>Account type</th><th>Main role</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Management account</strong></td><td>Designates or removes the delegated administrator.</td></tr>
+          <tr><td><strong>Delegated administrator</strong></td><td>Manages Security Hub centrally for member accounts and Regions.</td></tr>
+          <tr><td><strong>Member account</strong></td><td>Receives configuration and contributes findings and compliance data.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout info"><span class="ci">ℹ️</span><span><strong>Pattern to remember:</strong> Management account assigns delegated admin → delegated admin applies policies → member accounts inherit the setup.</span></div>
+    </div>
+  </div></section>
+
+  <section id="s3"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">03</span><span class="sec-icon">📄</span>
+      <span class="sec-title">ASFF &amp; Data Standards</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul>
+        <li><strong>ASFF:</strong> AWS Security Finding Format. JSON-based, normalized, and central to Security Hub.</li>
+        <li><strong>Required field:</strong> <code>AwsAccountId</code>.</li>
+        <li><strong>Third-party integrations:</strong> Must map findings into the supported format model used by Security Hub.</li>
+        <li><strong>OCSF:</strong> Useful to remember for downstream export use cases such as Amazon Security Lake.</li>
+      </ul>
+      <div class="tw"><table>
+        <thead><tr><th>Term</th><th>Remember it as</th></tr></thead>
+        <tbody>
+          <tr><td><strong>ASFF</strong></td><td>Security Hub’s normalized finding format.</td></tr>
+          <tr><td><strong>OCSF</strong></td><td>Open schema commonly associated with external export and lake-style workflows.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout tip"><span class="ci">💡</span><span><strong>Exam shortcut:</strong> ASFF inside Security Hub. OCSF when the question shifts toward data lake and broader export ecosystem language.</span></div>
+    </div>
+  </div></section>
+
+  <h2 class="gl" id="findings">Findings &amp; Classification</h2>
+
+  <section id="s4"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">04</span><span class="sec-icon">🔄</span>
+      <span class="sec-title">Findings &amp; Workflow Status</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <p>A <strong>finding</strong> is a security observation. Workflow status tracks the human response process, not the technical seriousness of the issue.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Status</th><th>Meaning</th><th>Exam note</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-red">NEW</span></td><td>Freshly discovered and not yet actioned.</td><td>Default starting state.</td></tr>
+          <tr><td><span class="badge b-purp">NOTIFIED</span></td><td>Someone has been informed.</td><td>Useful for tracking ownership.</td></tr>
+          <tr><td><span class="badge b-grn">RESOLVED</span></td><td>The issue has been fixed.</td><td>Does not delete the finding record.</td></tr>
+          <tr><td><span class="badge b-blue">SUPPRESSED</span></td><td>Intentionally hidden from active handling.</td><td>Does not mean remediated.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn"><span class="ci">⚠️</span><span><strong>High exam value:</strong> Workflow status and severity are different concepts. A HIGH severity finding can still be NEW, NOTIFIED, RESOLVED, or SUPPRESSED.</span></div>
+    </div>
+  </div></section>
+
+  <section id="s5"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">05</span><span class="sec-icon">📊</span>
+      <span class="sec-title">Severity Levels</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <div class="tw"><table>
+        <thead><tr><th>Level</th><th>Priority</th><th>Typical response</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b-red">CRITICAL</span></td><td>Highest urgency</td><td>Immediate triage and escalation.</td></tr>
+          <tr><td><span class="badge b-orng">HIGH</span></td><td>Serious compromise risk</td><td>Investigate and remediate fast.</td></tr>
+          <tr><td><span class="badge b-yel">MEDIUM</span></td><td>Suspicious, maybe compromise</td><td>Validate whether behavior is expected.</td></tr>
+          <tr><td><span class="badge b-blue">LOW</span></td><td>Minor issue or recon activity</td><td>Track and correlate.</td></tr>
+          <tr><td><span class="badge b-grn">INFORMATIONAL</span></td><td>Context only</td><td>No urgent action.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div></section>
+
+  <h2 class="gl" id="compliance">Compliance &amp; Scoring</h2>
+
+  <section id="s6"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">06</span><span class="sec-icon">🛡️</span>
+      <span class="sec-title">Security Standards &amp; the AWS Config Requirement</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul class="compact-list">
+        <li><span class="badge b-grn">FSBP</span> AWS Foundational Security Best Practices — the most important standard for exam prep.</li>
+        <li><span class="badge b-blue">CIS</span> CIS AWS Foundations Benchmark — baseline hardening and best-practice checks.</li>
+        <li><span class="badge b-purp">PCI DSS</span> Payment card controls.</li>
+        <li><span class="badge b-yel">NIST 800-53 / 800-171</span> Government and regulated control frameworks.</li>
+      </ul>
+      <div class="tw"><table>
+        <thead><tr><th>Need to remember</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AWS Config is required</strong></td><td>Security Hub relies on Config-backed control evaluation for compliance checks and scoring.</td></tr>
+          <tr><td><strong>FSBP is exam-heavy</strong></td><td>If unsure which standard AWS prefers in a question, FSBP is often the safest memory anchor.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout trap"><span class="ci">❌</span><span><strong>Major trap:</strong> No AWS Config in the account and Region means no meaningful compliance evaluation and no proper security score.</span></div>
+    </div>
+  </div></section>
+
+  <section id="s7"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">07</span><span class="sec-icon">📈</span>
+      <span class="sec-title">Security Score Logic</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul>
+        <li><strong>Formula:</strong> <code>Passed Controls ÷ Total Enabled Controls × 100</code></li>
+        <li><strong>NOT_AVAILABLE</strong> does not count against the score.</li>
+        <li><strong>SUPPRESSED</strong> findings do not count against the score either.</li>
+        <li><strong>Consolidated control findings</strong> reduce duplicate noise when one control maps to multiple standards.</li>
+      </ul>
+      <div class="tw"><table>
+        <thead><tr><th>Status</th><th>Impact on score</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PASSED</strong></td><td>Improves score.</td></tr>
+          <tr><td><strong>FAILED</strong></td><td>Lowers score.</td></tr>
+          <tr><td><strong>NOT_AVAILABLE</strong></td><td>Excluded.</td></tr>
+          <tr><td><strong>SUPPRESSED finding</strong></td><td>Excluded from score calculations.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout tip"><span class="ci">💡</span><span>One failed resource can affect multiple standards, but consolidated control findings help avoid drowning in duplicate alerts.</span></div>
+    </div>
+  </div></section>
+
+  <h2 class="gl" id="operations">Operations &amp; Automation</h2>
+
+  <section id="s8"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">08</span><span class="sec-icon">🌐</span>
+      <span class="sec-title">Cross-Region Aggregation</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul>
+        <li><strong>Home Region:</strong> Central place to view aggregated data.</li>
+        <li><strong>Replicates:</strong> Findings, resources, and trends.</li>
+        <li><strong>Existing findings:</strong> Older findings in a newly linked Region appear after they are updated.</li>
+        <li><strong>Cost:</strong> Replication itself does not add cost.</li>
+      </ul>
+      <div class="callout trap"><span class="ci">❌</span><span><strong>Main trap:</strong> Automation rules are not copied across Regions by cross-Region aggregation. Plan regional rule strategy separately.</span></div>
+    </div>
+  </div></section>
+
+  <section id="s9"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">09</span><span class="sec-icon">⚙️</span>
+      <span class="sec-title">Automation Rules vs. Custom Actions</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <div class="tw"><table>
+        <thead><tr><th>Type</th><th>Trigger</th><th>What it does</th><th>Limit</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Automation rules</strong></td><td>Automatic on finding ingestion/update</td><td>Change severity, workflow, notes, suppression</td><td>100</td></tr>
+          <tr><td><strong>Custom actions</strong></td><td>Manual analyst action</td><td>Send chosen findings to EventBridge for response flows</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+      <div class="flow">
+        <span class="fn">Security Hub</span><span class="fa">→</span>
+        <span class="fn">EventBridge</span><span class="fa">→</span>
+        <span class="fn">Lambda / SNS / SSM / Step Functions</span>
+      </div>
+      <div class="callout trap"><span class="ci">❌</span><span><strong>Always remember:</strong> Security Hub does not directly invoke Lambda. EventBridge sits in the middle.</span></div>
+    </div>
+  </div></section>
+
+  <section id="s10"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">10</span><span class="sec-icon">🔍</span>
+      <span class="sec-title">Insights</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul>
+        <li><strong>Insight:</strong> A saved grouped view of related findings using filters and a grouping key.</li>
+        <li><strong>Managed insights:</strong> AWS-provided, ready to use.</li>
+        <li><strong>Custom insights:</strong> You define the filters based on what matters to your team.</li>
+      </ul>
+      <div class="tw"><table>
+        <thead><tr><th>Good exam example</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td>S3 buckets with the most critical findings</td><td>Shows how insights surface patterns, not just single findings.</td></tr>
+          <tr><td>Accounts with the most unresolved HIGH findings</td><td>Useful for prioritization across organizations.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div></section>
+
+  <h2 class="gl" id="integrations">Integrations &amp; Cost</h2>
+
+  <section id="s11"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">11</span><span class="sec-icon">🔗</span>
+      <span class="sec-title">Integrations &amp; Syncing</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <ul>
+        <li><strong>Native AWS sources:</strong> GuardDuty, Inspector, Macie, Firewall Manager, IAM Access Analyzer, and others depending on enablement.</li>
+        <li><strong>Third-party partners:</strong> Integrate through the supported findings format model.</li>
+        <li><strong>One-way sync example:</strong> GuardDuty sends findings into Security Hub, but changes made in GuardDuty do not automatically reverse-sync into Hub workflow behavior.</li>
+      </ul>
+      <div class="callout trap"><span class="ci">❌</span><span><strong>Trap:</strong> CloudTrail and VPC Flow Logs are not direct Security Hub finding providers. Other services analyze them first.</span></div>
+    </div>
+  </div></section>
+
+  <section id="s12"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">12</span><span class="sec-icon">💰</span>
+      <span class="sec-title">Pricing &amp; Retention</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <div class="tw"><table>
+        <thead><tr><th>Item</th><th>Remember this</th></tr></thead>
+        <tbody>
+          <tr><td>Finding retention</td><td>Archived after <strong>90 days</strong> of no activity.</td></tr>
+          <tr><td>Security score trends</td><td>Retained for <strong>1 year</strong>.</td></tr>
+          <tr><td>Cross-Region replication</td><td><strong>No added cost</strong> for the replication action itself.</td></tr>
+          <tr><td>Pricing model idea</td><td>Think in terms of security checks and ingested findings, not cross-Region linkage fees.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div></section>
+
+  <h2 class="gl" id="advanced">Advanced &amp; Limits</h2>
+
+  <section id="s13"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">13</span><span class="sec-icon">🛠️</span>
+      <span class="sec-title">Advanced Concepts (SCS-C03 Specific)</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <div class="tw"><table>
+        <thead><tr><th>Concept</th><th>What to remember</th></tr></thead>
+        <tbody>
+          <tr><td><code>BatchUpdateFindings</code></td><td>Used to bulk update many findings programmatically.</td></tr>
+          <tr><td><code>ProductArn</code></td><td>Helpful for filtering by source product.</td></tr>
+          <tr><td>Compliance values</td><td><code>PASSED</code>, <code>FAILED</code>, <code>WARNING</code>, <code>NOT_AVAILABLE</code></td></tr>
+          <tr><td>Central configuration</td><td>Delegated admin can push policy at scale; members follow centrally managed controls.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div></section>
+
+  <section id="s14"><div class="sec">
+    <div class="sec-hd" onclick="toggle(this)">
+      <span class="sec-num">14</span><span class="sec-icon">🚫</span>
+      <span class="sec-title">What Security Hub Does NOT Do</span>
+      <span class="sec-tog"><svg viewBox="0 0 10 10"><polyline points="3,2 7,5 3,8"/></svg></span>
+    </div>
+    <div class="sec-body">
+      <div class="tw"><table>
+        <thead><tr><th>Myth</th><th>Reality</th></tr></thead>
+        <tbody>
+          <tr><td><strong>It auto-remediates issues.</strong></td><td>No. You need downstream workflow tooling.</td></tr>
+          <tr><td><strong>It reads raw logs like a SIEM.</strong></td><td>No. It consumes findings and compliance results, not raw telemetry analysis.</td></tr>
+          <tr><td><strong>It replaces GuardDuty.</strong></td><td>No. GuardDuty detects; Security Hub aggregates and prioritizes.</td></tr>
+          <tr><td><strong>It blocks threats.</strong></td><td>No. It is not an enforcement service.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div></section>
+
+  <h2 class="gl" id="flashcards">Flashcard Revision</h2>
+  <p style="color:var(--text-m);font-size:15px">Tap any card to flip it and reveal the answer.</p>
+  <div class="cards-grid">
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — Single pane of glass</div><div class="flip-q">Which AWS service gives a centralized view of security findings across accounts and services?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a">AWS Security Hub. It aggregates findings and compliance posture in one place.</div></div>
+      </div>
+    </div>
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — Config dependency</div><div class="flip-q">What must be enabled for Security Hub compliance checks to produce a score?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a">AWS Config must be enabled in the same account and Region.</div></div>
+      </div>
+    </div>
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — Automation path</div><div class="flip-q">Can Security Hub trigger Lambda directly?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a">No. The path is Security Hub → EventBridge → Lambda or another target.</div></div>
+      </div>
+    </div>
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — One-way sync</div><div class="flip-q">If you archive a GuardDuty finding in GuardDuty, is it automatically archived in Security Hub?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a">No. Findings flow into Security Hub, but actions do not fully reverse-sync back the way people expect.</div></div>
+      </div>
+    </div>
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — Regional trap</div><div class="flip-q">Do automation rules replicate when cross-Region aggregation is enabled?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a">No. Cross-Region aggregation does not replicate automation rules.</div></div>
+      </div>
+    </div>
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — Score logic</div><div class="flip-q">How is Security Hub security score calculated?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a">Passed controls divided by total enabled controls. NOT_AVAILABLE and SUPPRESSED do not count against the score.</div></div>
+      </div>
+    </div>
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — Required field</div><div class="flip-q">What ASFF field is mandatory in every finding?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a"><code>AwsAccountId</code></div></div>
+      </div>
+    </div>
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+      <div class="flip-inner">
+        <div class="flip-f"><div class="flip-lbl">Q — Retention</div><div class="flip-q">How long are findings and score trends retained?</div><div class="flip-hint">Tap to flip →</div></div>
+        <div class="flip-b"><div class="flip-lbl">Answer</div><div class="flip-a">Findings are archived after 90 days of no activity. Score trends are retained for 1 year.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="gl" id="checklist">Exam Readiness Checklist</h2>
+  <div class="prog-wrap">
+    <span class="prog-lbl">Progress</span>
+    <div class="prog-track"><div class="prog-fill" id="pf"></div></div>
+    <span class="prog-count" id="pc">0 / 14</span>
+  </div>
+  <div class="checklist">
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know Security Hub is the centralized security findings and compliance dashboard.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know AWS Config is required for compliance checks and security scores.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I can recall NEW, NOTIFIED, RESOLVED, and SUPPRESSED workflow statuses.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know Security Hub routes automated response through EventBridge, not directly to Lambda.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know GuardDuty and other services feed Security Hub; Security Hub does not read raw CloudTrail directly.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know ASFF is the normalized finding format and AwsAccountId is required.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know automation rules do not replicate across Regions in cross-Region aggregation.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know the Organizations management account assigns the delegated administrator.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know the security score is based on passed controls divided by enabled controls.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know SUPPRESSED findings do not count against the score but are not fixed.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know findings are archived after 90 days of inactivity and score trends are kept for 1 year.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know FSBP is the most important standard to remember for Security Hub questions.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know custom actions are for analyst-triggered EventBridge workflows.</div></div>
+    <div class="chk" onclick="chk(this)"><div class="chk-box"></div><div class="chk-text">I know Security Hub aggregates and prioritizes, but does not enforce or remediate by itself.</div></div>
+  </div>
+
+  <h2 class="gl" id="refs">Official AWS Documentation</h2>
+  <div class="refs-grid">
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/what-is-securityhub.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>What is AWS Security Hub?</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-findings-format.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>ASFF — Finding Format Reference</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-standards.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Security Standards Overview</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/fsbp-standard.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>AWS FSBP Standard</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-auto-enabled-standards.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Automatically Enabled Standards</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/automation-rules.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Automation Rules</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-cwe-custom-actions.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Custom Actions and EventBridge</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/findings-workflow-status.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Finding Workflow Status</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/security-hub-region-aggregation.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Cross-Region Aggregation</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/designate-orgs-admin-account.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Delegated Administrator</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/central-configuration-intro.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Central Configuration</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-insights.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Security Hub Insights</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-findings-providers.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Finding Providers</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/asff-required-attributes.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Required ASFF Attributes</a>
+    <a class="ref-a" href="https://docs.aws.amazon.com/securityhub/latest/userguide/standards-security-score.html" target="_blank" rel="noopener"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1h4v4M11 1L5 7M3 3H1v8h8V9"/></svg>Security Scores</a>
+  </div>
+</main>
+</div>
+
+<footer>AWS Security Specialty SCS-C03 · Security Hub Study Guide · GuardDuty-matched typography and improved revision workflow</footer>
+
+<script>
+function setTheme(t,btn){
+  document.documentElement.setAttribute('data-theme',t);
+  document.querySelectorAll('.th-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  try{localStorage.setItem('study-theme',t)}catch(e){}
+}
+(function(){
+  try{
+    const s=localStorage.getItem('study-theme')||'dark';
+    document.documentElement.setAttribute('data-theme',s);
+    const idx={dark:0,light:1,pale:2}[s]||0;
+    document.querySelectorAll('.th-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  }catch(e){}
+})();
+function toggle(hd){hd.closest('.sec').classList.toggle('open')}
+function expandAll(){document.querySelectorAll('.sec').forEach(s=>s.classList.add('open'))}
+function collapseAll(){document.querySelectorAll('.sec').forEach(s=>s.classList.remove('open'))}
+function lastDayCramMode(){
+  collapseAll();
+  document.querySelectorAll('#traps + .sec').forEach(sec=>sec.classList.add('open'));
+  location.hash='traps';
+}
+function chk(el){
+  el.classList.toggle('done');
+  el.querySelector('.chk-box').textContent=el.classList.contains('done')?'✓':'';
+  const done=document.querySelectorAll('.chk.done').length;
+  const total=document.querySelectorAll('.chk').length;
+  document.getElementById('pf').style.width=Math.round(done/total*100)+'%';
+  document.getElementById('pc').textContent=done+' / '+total;
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+document.querySelectorAll('.sl').forEach(link=>link.addEventListener('click',()=>closeSidebar()));
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const id=e.target.id;
+      document.querySelectorAll('.sl').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+id));
+    }
+  });
+},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('section[id],h2[id]').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
