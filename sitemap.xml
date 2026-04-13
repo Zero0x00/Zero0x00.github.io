@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://mohdarif.com/</loc>
+  </url>
+
+  <url>
+    <loc>https://mohdarif.com/notes/LLM/attention_is_all_you_need.html</loc>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/LLM/llm-security-starter.html</loc>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/LLM/openai_prompting_embeddings.html</loc>
+  </url>
+
+  <url>
+    <loc>https://mohdarif.com/notes/MCP/attack-flow.html</loc>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/MCP/github_mcp_issue.html</loc>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/MCP/risk-impact.html</loc>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/MCP/security-comparison.html</loc>
+  </url>
+
+  <url>
+    <loc>https://mohdarif.com/notes/aws-security/detection.html</loc>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/aws-security/detection/guardduty_study_guide.html</loc>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/aws-security/detection/securityhub-study-guide.html</loc>
+  </url>
+</urlset>
