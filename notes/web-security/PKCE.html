@@ -1,0 +1,1108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PKCE Interactive Explainer v3</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --panel: #111827;
+      --panel-2: #172033;
+      --card: #152238;
+      --card-2: #0f1b2d;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: rgba(148, 163, 184, .28);
+      --accent: #38bdf8;
+      --accent-2: #a78bfa;
+      --good: #34d399;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+      --code: #050816;
+      --shadow: 0 24px 70px rgba(0,0,0,.35);
+      --radius: 22px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(56, 189, 248, .18), transparent 26rem),
+        radial-gradient(circle at 85% 5%, rgba(167, 139, 250, .15), transparent 24rem),
+        linear-gradient(180deg, #08101e 0%, #0b1120 45%, #080d18 100%);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+
+    a { color: #7dd3fc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .shell { width: min(1220px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 60px; }
+
+    header.hero {
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      padding: 32px;
+      background: linear-gradient(135deg, rgba(17, 24, 39, .92), rgba(21, 34, 56, .88));
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    header.hero::after {
+      content: "";
+      position: absolute;
+      inset: -70px -80px auto auto;
+      width: 300px;
+      height: 300px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(56,189,248,.18), transparent 68%);
+      pointer-events: none;
+    }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .78rem; }
+    h1 { margin: 10px 0 12px; font-size: clamp(2.2rem, 5vw, 4.4rem); line-height: .95; letter-spacing: -.05em; }
+    .lede { color: #cbd5e1; max-width: 860px; font-size: clamp(1rem, 1.8vw, 1.18rem); }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr); gap: 20px; align-items: end; }
+    .fact-card { border: 1px solid var(--line); background: rgba(8, 13, 24, .58); border-radius: var(--radius); padding: 18px; }
+    .fact-card strong { color: #fff; display: block; margin-bottom: 6px; }
+    .fact-card span { color: var(--muted); }
+
+    .tabs {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: rgba(8, 13, 24, .78);
+      backdrop-filter: blur(18px);
+      border-radius: 20px;
+    }
+    .tab-btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #cbd5e1;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+    .tab-btn:hover { background: rgba(148, 163, 184, .1); color: white; }
+    .tab-btn.active { background: linear-gradient(135deg, rgba(56,189,248,.20), rgba(167,139,250,.18)); color: white; border-color: rgba(125, 211, 252, .34); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .section-title { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin: 28px 0 14px; }
+    .section-title h2 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.4rem); letter-spacing: -.03em; }
+    .section-title p { margin: 0; color: var(--muted); max-width: 650px; }
+
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.flow-layout { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+    .card {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(21, 34, 56, .88), rgba(15, 27, 45, .9));
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 16px 45px rgba(0,0,0,.16);
+    }
+    .card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+    .card p, .card li { color: #cbd5e1; }
+    .muted { color: var(--muted); }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .pill { border: 1px solid var(--line); background: rgba(148,163,184,.08); color: #dbeafe; border-radius: 999px; padding: 6px 10px; font-size: .78rem; font-weight: 800; }
+    .pill.good { color: #bbf7d0; border-color: rgba(52, 211, 153, .3); background: rgba(52, 211, 153, .08); }
+    .pill.warn { color: #fde68a; border-color: rgba(251, 191, 36, .3); background: rgba(251, 191, 36, .08); }
+    .pill.bad { color: #fecdd3; border-color: rgba(251, 113, 133, .3); background: rgba(251, 113, 133, .08); }
+
+    .flow-wrap {
+      position: relative;
+      min-height: 640px;
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: 18px;
+      background: rgba(8, 13, 24, .52);
+      overflow: hidden;
+    }
+    .flow-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .flow-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(170px, 1fr));
+      grid-template-rows: repeat(3, minmax(150px, auto));
+      gap: 18px;
+    }
+    .node {
+      min-height: 150px;
+      border: 1px solid rgba(148, 163, 184, .28);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(15, 27, 45, .84);
+      cursor: pointer;
+      transition: .22s ease;
+      position: relative;
+    }
+    .node:hover { transform: translateY(-3px); border-color: rgba(56, 189, 248, .55); background: rgba(21, 34, 56, .96); }
+    .node.active { border-color: rgba(56, 189, 248, .9); box-shadow: 0 0 0 3px rgba(56,189,248,.13), 0 20px 50px rgba(0,0,0,.18); }
+    .node .num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: rgba(56,189,248,.15); color: #bae6fd; font-weight: 900; margin-bottom: 10px; }
+    .node h3 { margin: 0 0 8px; font-size: 1rem; }
+    .node p { margin: 0; color: #cbd5e1; font-size: .92rem; }
+    .node small { display: block; margin-top: 10px; color: var(--muted); font-family: var(--mono); font-size: .72rem; }
+    .node.attacker { background: rgba(68, 20, 35, .72); border-color: rgba(251, 113, 133, .32); }
+    .node.attacker .num { background: rgba(251,113,133,.14); color: #fecdd3; }
+
+    .details { position: sticky; top: 96px; max-height: calc(100vh - 116px); overflow: auto; }
+    .details h3 { margin-top: 0; font-size: 1.35rem; }
+    .details .label { color: var(--accent); font-weight: 900; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+
+    pre, code { font-family: var(--mono); }
+    pre {
+      margin: 12px 0;
+      padding: 14px;
+      border: 1px solid rgba(148,163,184,.22);
+      border-radius: 16px;
+      background: var(--code);
+      overflow-x: auto;
+      color: #dbeafe;
+      font-size: .84rem;
+      line-height: 1.45;
+    }
+    .hl { color: #fef08a; font-weight: 900; }
+    .hl2 { color: #86efac; font-weight: 900; }
+    .hl3 { color: #fda4af; font-weight: 900; }
+    .inline-code { font-family: var(--mono); background: rgba(15,23,42,.8); border: 1px solid rgba(148,163,184,.24); padding: 2px 6px; border-radius: 8px; color: #e0f2fe; }
+
+    button.action, .copy-btn {
+      border: 1px solid rgba(125,211,252,.34);
+      background: linear-gradient(135deg, rgba(56,189,248,.18), rgba(167,139,250,.14));
+      color: white;
+      border-radius: 14px;
+      padding: 10px 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    button.action:hover, .copy-btn:hover { filter: brightness(1.12); }
+    button.secondary { border-color: rgba(148,163,184,.26); background: rgba(148,163,184,.08); }
+    button.danger { border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.12); }
+    button.success { border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.12); }
+
+    .input-row { display: grid; gap: 8px; margin: 12px 0; }
+    label { color: #dbeafe; font-weight: 800; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(148,163,184,.28);
+      border-radius: 14px;
+      background: rgba(8,13,24,.8);
+      color: #e5e7eb;
+      padding: 11px 12px;
+      font-family: var(--mono);
+      font-size: .88rem;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    .mini { font-size: .82rem; color: var(--muted); }
+
+    .status {
+      border: 1px solid var(--line);
+      background: rgba(8,13,24,.58);
+      border-radius: 16px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .status.good { border-color: rgba(52,211,153,.38); background: rgba(52,211,153,.08); }
+    .status.bad { border-color: rgba(251,113,133,.38); background: rgba(251,113,133,.08); }
+    .status.warn { border-color: rgba(251,191,36,.38); background: rgba(251,191,36,.08); }
+
+    .timeline { display: grid; gap: 12px; }
+    .event {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid rgba(148,163,184,.22);
+      border-radius: 16px;
+      background: rgba(8,13,24,.42);
+    }
+    .event .dot { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 999px; background: rgba(56,189,248,.13); color: #bae6fd; font-weight: 900; }
+    .event h4 { margin: 0 0 4px; }
+    .event p { margin: 0; color: #cbd5e1; }
+
+    .table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 16px; border: 1px solid var(--line); }
+    .table th, .table td { text-align: left; padding: 12px; border-bottom: 1px solid rgba(148,163,184,.18); vertical-align: top; }
+    .table th { background: rgba(8,13,24,.72); color: #e0f2fe; }
+    .table td { color: #cbd5e1; background: rgba(15,27,45,.42); }
+    .table tr:last-child td { border-bottom: 0; }
+
+    .checklist { display: grid; gap: 10px; }
+    .check-item { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 12px; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; background: rgba(8,13,24,.42); }
+    .check-item input { width: 18px; height: 18px; margin-top: 3px; accent-color: #38bdf8; }
+    .check-item strong { display: block; margin-bottom: 3px; }
+    .progress { height: 12px; background: rgba(148,163,184,.18); border-radius: 999px; overflow: hidden; border: 1px solid rgba(148,163,184,.18); }
+    .progress span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--good)); transition: width .2s ease; }
+
+    .quiz-options { display: grid; gap: 8px; }
+    .quiz-options button { text-align: left; }
+
+    footer { margin-top: 28px; color: var(--muted); font-size: .9rem; }
+
+    @media (max-width: 980px) {
+      .hero-grid, .grid.two, .grid.three, .grid.flow-layout { grid-template-columns: 1fr; }
+      .flow-grid { grid-template-columns: 1fr; }
+      .flow-wrap { min-height: auto; }
+      .flow-svg { display: none; }
+      .details { position: static; max-height: none; }
+      .section-title { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">OAuth Security Engineering</div>
+          <h1>PKCE, explained interactively</h1>
+          <p class="lede">PKCE, pronounced "pixy", is the OAuth proof-of-possession extension that prevents a stolen authorization code from being redeemed by an attacker. This version adds security-training lenses for internal engineering enablement: the <span class="inline-code">plain</span> method trap, Authorization Code Injection against confidential clients, and the PKCE protection boundary where access-token defenses must take over.</p>
+          <div class="pill-row">
+            <span class="pill good">Authorization Code Flow</span>
+            <span class="pill good">S256 by default</span>
+            <span class="pill warn">Not a redirect URI replacement</span>
+            <span class="pill warn">Not client authentication</span>
+          </div>
+        </div>
+        <div class="fact-card">
+          <strong>Core mental model</strong>
+          <span>The authorization code is a locked box. The <span class="inline-code">code_verifier</span> is the key. The <span class="inline-code">code_challenge</span> is a commitment to that key sent before the box exists.</span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="PKCE sections">
+      <button class="tab-btn active" data-tab="flow">Interactive Flow</button>
+      <button class="tab-btn" data-tab="generator">Live Generator</button>
+      <button class="tab-btn" data-tab="attack">Attack Simulator</button>
+      <button class="tab-btn" data-tab="training">Training Labs</button>
+      <button class="tab-btn" data-tab="checklist">Checklist</button>
+      <button class="tab-btn" data-tab="reference">Reference</button>
+    </nav>
+
+    <main>
+      <section id="flow" class="tab-panel active">
+        <div class="section-title">
+          <div>
+            <h2>Authorization Code + PKCE flow</h2>
+            <p>Click each block to inspect the exact data moving through the flow. The important security invariant: the client sends only the derived challenge up front, then proves knowledge of the original verifier at token exchange.</p>
+          </div>
+        </div>
+
+        <div class="grid flow-layout">
+          <div class="flow-wrap" id="flowWrap">
+            <svg class="flow-svg" id="flowSvg" aria-hidden="true">
+              <defs>
+                <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+                  <path d="M2,2 L10,6 L2,10 Z" fill="rgba(125,211,252,.72)"></path>
+                </marker>
+              </defs>
+            </svg>
+            <div class="flow-grid">
+              <button class="node active" id="node-start" data-step="start">
+                <span class="num">1</span>
+                <h3>Client creates verifier</h3>
+                <p>Generate high-entropy secret locally.</p>
+                <small>code_verifier</small>
+              </button>
+              <button class="node" id="node-challenge" data-step="challenge">
+                <span class="num">2</span>
+                <h3>Client derives challenge</h3>
+                <p>Hash the verifier using S256.</p>
+                <small>code_challenge</small>
+              </button>
+              <button class="node" id="node-authorize" data-step="authorize">
+                <span class="num">3</span>
+                <h3>Authorize request</h3>
+                <p>Send challenge, not verifier.</p>
+                <small>/authorize</small>
+              </button>
+              <button class="node" id="node-login" data-step="login">
+                <span class="num">4</span>
+                <h3>User authenticates</h3>
+                <p>Authorization server validates user and consent.</p>
+                <small>browser redirect</small>
+              </button>
+              <button class="node" id="node-code" data-step="code">
+                <span class="num">5</span>
+                <h3>Authorization code issued</h3>
+                <p>Server stores code with PKCE challenge metadata.</p>
+                <small>code + state</small>
+              </button>
+              <button class="node attacker" id="node-intercept" data-step="intercept">
+                <span class="num">!</span>
+                <h3>Attacker steals code</h3>
+                <p>Interception alone is not enough.</p>
+                <small>missing verifier</small>
+              </button>
+              <button class="node" id="node-token" data-step="token">
+                <span class="num">6</span>
+                <h3>Token request</h3>
+                <p>Client sends code plus verifier.</p>
+                <small>/token</small>
+              </button>
+              <button class="node" id="node-verify" data-step="verify">
+                <span class="num">7</span>
+                <h3>Server verifies proof</h3>
+                <p>Recompute challenge and compare.</p>
+                <small>S256 match</small>
+              </button>
+              <button class="node" id="node-tokens" data-step="tokens">
+                <span class="num">8</span>
+                <h3>Tokens issued</h3>
+                <p>Only the legitimate client gets tokens.</p>
+                <small>access token</small>
+              </button>
+            </div>
+          </div>
+
+          <aside class="card details" id="stepDetails" aria-live="polite"></aside>
+        </div>
+      </section>
+
+      <section id="generator" class="tab-panel">
+        <div class="section-title">
+          <div>
+            <h2>Live PKCE generator</h2>
+            <p>Generate a valid verifier, derive the S256 challenge, and test how the authorization server verifies the token request.</p>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div class="card">
+            <h3>Generate verifier and challenge</h3>
+            <p class="muted">RFC 7636 defines the verifier as a high-entropy cryptographic random string using unreserved URI characters, 43 to 128 characters long. The S256 challenge is base64url(SHA256(ASCII(verifier))).</p>
+            <div class="pill-row">
+              <button class="action" id="generateBtn">Generate secure pair</button>
+              <button class="action secondary" id="copyAuthorizeBtn">Copy authorize URL</button>
+              <button class="action secondary" id="copyTokenBtn">Copy token request</button>
+            </div>
+            <div class="input-row">
+              <label for="verifierInput">code_verifier</label>
+              <textarea id="verifierInput" spellcheck="false"></textarea>
+              <div class="mini" id="verifierMeta">Waiting for verifier...</div>
+            </div>
+            <div class="input-row">
+              <label for="challengeInput">code_challenge</label>
+              <textarea id="challengeInput" spellcheck="false" readonly></textarea>
+            </div>
+            <div class="input-row">
+              <label for="challengeMethod">code_challenge_method</label>
+              <select id="challengeMethod">
+                <option value="S256" selected>S256 - recommended and expected</option>
+                <option value="plain">plain - training/legacy only; reject in production</option>
+              </select>
+            </div>
+            <div id="generatorStatus" class="status warn">Generate a pair to see the computed challenge.</div>
+          </div>
+
+          <div class="card">
+            <h3>API shape</h3>
+            <p class="muted">PKCE changes both the authorization request and token request. It does not replace redirect URI checks, client authentication for confidential clients, or state/nonce correlation.</p>
+            <pre id="authorizeBlock"></pre>
+            <pre id="tokenBlock"></pre>
+            <div class="status">
+              <strong>Public vs confidential clients</strong>
+              <p>Public clients prove possession using PKCE but cannot keep a client secret. Confidential clients still authenticate to the token endpoint, commonly with an Authorization Basic header, and should also use PKCE.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <h3>Verification lab</h3>
+          <p class="muted">Paste a verifier into the simulated token request. The server recomputes the challenge and compares it with the challenge stored when the code was issued.</p>
+          <div class="grid two">
+            <div class="input-row">
+              <label for="attemptVerifier">Verifier submitted to /token</label>
+              <textarea id="attemptVerifier" spellcheck="false"></textarea>
+            </div>
+            <div>
+              <label>Verification result</label>
+              <div id="verifyStatus" class="status warn">No verification attempted yet.</div>
+              <div class="pill-row">
+                <button class="action success" id="verifyLegitBtn">Use legitimate verifier</button>
+                <button class="action danger" id="verifyWrongBtn">Use attacker verifier</button>
+                <button class="action" id="verifyBtn">Verify submitted value</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="attack" class="tab-panel">
+        <div class="section-title">
+          <div>
+            <h2>Attack simulator: authorization code interception</h2>
+            <p>Walk through the exact scenario PKCE was designed for: the authorization code leaks through a redirect, log, malicious app link handler, browser extension, proxy, or referer-style bug.</p>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div class="card">
+            <h3>Scenario controls</h3>
+            <p class="muted">Run the flow with or without PKCE and observe whether the stolen authorization code can be exchanged for tokens.</p>
+            <div class="input-row">
+              <label for="scenarioMode">Flow mode</label>
+              <select id="scenarioMode">
+                <option value="pkce" selected>With S256 PKCE - attacker has code but no verifier</option>
+                <option value="nopkce">Without PKCE - attacker has code only</option>
+                <option value="plainmethod">With plain PKCE - authorize request exposes verifier-equivalent value</option>
+                <option value="leakedverifier">PKCE misused - attacker also gets verifier</option>
+                <option value="confnopkce">Confidential client without PKCE - code injection risk</option>
+                <option value="confpkce">Confidential client with PKCE - code injection blocked</option>
+              </select>
+            </div>
+            <div class="pill-row">
+              <button class="action" id="resetScenarioBtn">Reset</button>
+              <button class="action" id="nextScenarioBtn">Next step</button>
+            </div>
+            <div id="scenarioStatus" class="status">Start the simulator.</div>
+          </div>
+
+          <div class="card">
+            <h3>Event log</h3>
+            <div class="timeline" id="scenarioLog"></div>
+          </div>
+        </div>
+
+        <div class="grid three" style="margin-top:16px;">
+          <div class="card">
+            <h3>What PKCE stops</h3>
+            <ul>
+              <li>Authorization code interception before the token request.</li>
+              <li>Malicious native app registering the same custom URL scheme.</li>
+              <li>Code leakage through logs or front-channel redirects, if the verifier remains secret.</li>
+              <li>Authorization-code injection against confidential clients when the injected code does not match the session-bound verifier.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>What PKCE does not stop</h3>
+            <ul>
+              <li>Access token theft after token issuance.</li>
+              <li>Open redirect or weak redirect URI validation by itself.</li>
+              <li>XSS that steals the verifier before token exchange.</li>
+              <li>Bad account linking or missing ID token validation in OIDC login.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Security engineering takeaway</h3>
+            <p>PKCE binds the authorization code to the client instance that started the flow. It is a code redemption control, not a full OAuth threat model by itself.</p>
+          </div>
+        </div>
+      </section>
+
+
+      <section id="training" class="tab-panel">
+        <div class="section-title">
+          <div>
+            <h2>Training labs for engineering teams</h2>
+            <p>Use these exercises to teach the implementation details that usually cause real PKCE mistakes in production systems.</p>
+          </div>
+        </div>
+
+        <div class="grid three">
+          <div class="card">
+            <h3>1. The plain method trap</h3>
+            <p class="muted">In <span class="inline-code">plain</span> mode, the value sent as <span class="inline-code">code_challenge</span> is the verifier itself. If an observer sees the authorization request and later obtains the authorization code, PKCE no longer adds a useful proof because the verifier-equivalent value was already exposed.</p>
+            <pre>GET /authorize?
+  response_type=code
+  code_challenge=VERIFIER_VALUE
+  code_challenge_method=plain
+
+# Training question:
+# What secret remains hidden from an observer?</pre>
+            <div class="status bad"><strong>Security policy:</strong> reject <span class="inline-code">code_challenge_method=plain</span> for normal internal clients. Treat it as a legacy exception that requires explicit risk acceptance.</div>
+          </div>
+
+          <div class="card">
+            <h3>2. Authorization Code Injection: confidential clients still need PKCE</h3>
+            <p class="muted">A backend web application can authenticate to <span class="inline-code">/token</span> with a client secret, but that only proves which application is redeeming the code. It does not prove that this browser session initiated the authorization request that produced the code.</p>
+            <pre>Attacker injects a stolen victim code into:
+  https://client.example/callback?code=VICTIM_CODE&state=ATTACKER_STATE
+
+Backend has valid client_secret, so without PKCE:
+  client redeems VICTIM_CODE at /token</pre>
+            <div class="status warn"><strong>Teaching point:</strong> client authentication proves which application is calling <span class="inline-code">/token</span>. PKCE proves this specific client flow initiated the authorization request.</div>
+          </div>
+
+          <div class="card">
+            <h3>3. PKCE protection boundary</h3>
+            <p class="muted">PKCE protects authorization-code redemption. After tokens are issued, token theft, replay, and misuse require separate controls.</p>
+            <ul>
+              <li>Use least-privilege scopes and short access-token lifetimes.</li>
+              <li>Rotate refresh tokens and detect reuse.</li>
+              <li>Consider sender-constrained tokens such as DPoP or mTLS for high-risk APIs.</li>
+              <li>Protect browser/native storage from XSS, malware, logs, and backups.</li>
+            </ul>
+            <div class="status"><strong>Transition:</strong> after teaching PKCE, continue into access-token storage, refresh-token rotation, and sender-constrained token design.</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <h3>How to use this in internal training</h3>
+          <div class="grid three">
+            <div>
+              <strong>Prompt 1: plain downgrade</strong>
+              <p class="muted">Show an authorization request with <span class="inline-code">code_challenge_method=plain</span>. Ask: what secret remains hidden if this URL is logged?</p>
+              <p><strong>Expected control:</strong> enforce <span class="inline-code">S256</span> and reject <span class="inline-code">plain</span> except documented legacy exceptions.</p>
+            </div>
+            <div>
+              <strong>Prompt 2: injected code</strong>
+              <p class="muted">Show a confidential-client callback containing a stolen victim code and an attacker session state. Ask: what does the client secret prove?</p>
+              <p><strong>Expected control:</strong> bind the code to the session-owned verifier and reject token exchange when the proof does not match.</p>
+            </div>
+            <div>
+              <strong>Prompt 3: stolen access token</strong>
+              <p class="muted">After successful token issuance, assume the access token is stolen from browser storage. Ask: does PKCE still help?</p>
+              <p><strong>Expected control:</strong> use short lifetimes, refresh rotation, safe storage, and sender-constrained tokens such as DPoP or mTLS for high-risk APIs.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <h3>Facilitator exercise</h3>
+          <p class="muted">Pick a lab and ask engineers to identify the vulnerable line, the failed assumption, and the correct platform control.</p>
+          <div class="pill-row">
+            <button class="action secondary" data-lab="plainLab">Run plain-method discussion</button>
+            <button class="action secondary" data-lab="confLab">Run confidential-client discussion</button>
+            <button class="action secondary" data-lab="boundaryLab">Run boundary discussion</button>
+          </div>
+          <div id="trainingLabPanel" class="status" style="margin-top:12px;">Choose an exercise above.</div>
+        </div>
+      </section>
+
+      <section id="checklist" class="tab-panel">
+        <div class="section-title">
+          <div>
+            <h2>PKCE implementation checklist</h2>
+            <p>Use this as a review checklist for OAuth clients and authorization servers.</p>
+          </div>
+          <div style="min-width:260px;">
+            <div class="progress" aria-label="Checklist progress"><span id="progressBar"></span></div>
+            <div class="mini" id="progressText" style="margin-top:8px;">0% complete</div>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div class="card">
+            <h3>Client requirements</h3>
+            <div class="checklist" id="clientChecks"></div>
+          </div>
+          <div class="card">
+            <h3>Authorization server requirements</h3>
+            <div class="checklist" id="serverChecks"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="reference" class="tab-panel">
+        <div class="section-title">
+          <div>
+            <h2>Precise terminology and edge cases</h2>
+            <p>Security review notes to avoid common PKCE misunderstandings.</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <h3>Cryptographic correctness checkpoints</h3>
+          <div class="grid three">
+            <div>
+              <strong>Base64url encoding</strong>
+              <p class="muted">Use URL-safe Base64: replace <span class="inline-code">+</span> with <span class="inline-code">-</span>, replace <span class="inline-code">/</span> with <span class="inline-code">_</span>, and remove <span class="inline-code">=</span> padding.</p>
+            </div>
+            <div>
+              <strong>Verifier entropy</strong>
+              <p class="muted">Generate the verifier with a CSPRNG such as <span class="inline-code">crypto.getRandomValues</span>. Do not use <span class="inline-code">Math.random()</span>, timestamps, counters, or reusable values.</p>
+            </div>
+            <div>
+              <strong>Length invariant</strong>
+              <p class="muted">The verifier must be 43 to 128 characters from the RFC 7636 unreserved character set. A raw 32-byte random value becomes 43 characters after base64url encoding.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid two">
+          <div class="card">
+            <h3>PKCE terms</h3>
+            <table class="table">
+              <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><span class="inline-code">code_verifier</span></td><td>High-entropy secret generated by the client. It must be kept local until the token request.</td></tr>
+                <tr><td><span class="inline-code">code_challenge</span></td><td>Derived value sent in the authorization request. With S256, it is not reversible back to the verifier.</td></tr>
+                <tr><td><span class="inline-code">code_challenge_method</span></td><td>Use <span class="inline-code">S256</span>. <span class="inline-code">plain</span> exists for compatibility but exposes a verifier-equivalent value in the front channel, so internal authorization servers should reject it unless a documented legacy exception exists.</td></tr>
+                <tr><td>Authorization code</td><td>Short-lived, single-use value issued after authorization. PKCE makes it useless without the verifier.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card">
+            <h3>Common misconceptions</h3>
+            <table class="table">
+              <thead><tr><th>Misconception</th><th>Correction</th></tr></thead>
+              <tbody>
+                <tr><td>PKCE replaces <span class="inline-code">state</span>.</td><td>No. PKCE proves possession of the verifier for code redemption. <span class="inline-code">state</span> still helps correlate responses, restore UI state, and provide defense-in-depth against CSRF-style mixups.</td></tr>
+                <tr><td>PKCE replaces client secrets.</td><td>No. Confidential clients should still authenticate to the token endpoint. PKCE is an additional binding of authorization code to client instance.</td></tr>
+                <tr><td>The challenge is a secret.</td><td>No. The challenge is sent through the front channel. The verifier is the sensitive value.</td></tr>
+                <tr><td>PKCE fixes OAuth redirect bugs.</td><td>No. Strict redirect URI validation, no open redirects, and secure callback pages are still required.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <h3>Mini quiz</h3>
+          <p class="muted">Test the key distinction.</p>
+          <p><strong>Question:</strong> An attacker steals the authorization code from the callback URL, but the legitimate client kept the verifier secret. What happens at the token endpoint?</p>
+          <div class="quiz-options">
+            <button class="action secondary" data-quiz="wrong">The attacker gets tokens because the code is enough.</button>
+            <button class="action secondary" data-quiz="right">The token request fails because the attacker cannot provide a verifier that matches the stored challenge.</button>
+            <button class="action secondary" data-quiz="wrong">The authorization server asks the user to log in again.</button>
+          </div>
+          <div id="quizResult" class="status warn">Choose an answer.</div>
+        </div>
+
+        <footer>
+          Sources: <a href="https://datatracker.ietf.org/doc/html/rfc7636" target="_blank" rel="noreferrer">RFC 7636 - Proof Key for Code Exchange by OAuth Public Clients</a>, <a href="https://www.rfc-editor.org/rfc/rfc9700.html" target="_blank" rel="noreferrer">RFC 9700 - Best Current Practice for OAuth 2.0 Security</a>, <a href="https://www.rfc-editor.org/rfc/rfc9449.html" target="_blank" rel="noreferrer">RFC 9449 - OAuth 2.0 Demonstrating Proof of Possession</a>.
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const steps = {
+      start: {
+        label: 'Step 1', title: 'Client creates code_verifier', risk: 'Weak randomness or reused verifier defeats the proof.',
+        body: 'The client creates a new high-entropy random string per authorization attempt. The verifier is not sent to the authorization endpoint and should not be logged or stored beyond the active flow.',
+        code: `code_verifier = random_urlsafe_string(43..128 chars)\n// Example characters: A-Z a-z 0-9 - . _ ~`,
+        fix: ['Use a CSPRNG, not Math.random.', 'Generate one verifier per authorization request.', 'Keep it in ephemeral client/session storage until token exchange.']
+      },
+      challenge: {
+        label: 'Step 2', title: 'Client derives code_challenge', risk: 'Using plain leaks the verifier-shaped value through the front channel.',
+        body: 'With S256, the client computes SHA-256 over the ASCII verifier, then base64url-encodes the result without padding. The challenge is safe to send in the authorization request because it cannot practically be reversed.',
+        code: `code_challenge = BASE64URL(SHA256(ASCII(code_verifier)))\ncode_challenge_method = "S256"`,
+        fix: ['Require S256 where possible.', 'Reject unsupported challenge methods.', 'Do not confuse challenge with verifier.']
+      },
+      authorize: {
+        label: 'Step 3', title: 'Authorize request includes challenge', risk: 'PKCE does not compensate for bad redirect URI validation or missing state.',
+        body: 'The browser is redirected to the authorization server. The front-channel request includes the challenge, method, client identifier, redirect URI, scope, response type, and usually state.',
+        code: `GET /authorize?\n  response_type=code\n  client_id=spa-client\n  redirect_uri=https://client.example/callback\n  scope=openid profile api.read\n  state=opaque-correlation-value\n  code_challenge=...\n  code_challenge_method=S256`,
+        fix: ['Use exact redirect URI matching.', 'Keep state for response correlation and UI restoration.', 'For OIDC, also use nonce to bind the ID token to the auth request.']
+      },
+      login: {
+        label: 'Step 4', title: 'User authenticates and consents', risk: 'Consent UI, clickjacking, or login CSRF issues can still exist.',
+        body: 'PKCE is not the user authentication ceremony. The authorization server still needs secure login, consent, anti-clickjacking controls, and correct client/scopes display.',
+        code: `User -> Authorization Server\n  authenticates\n  reviews client + scopes\n  grants or denies`,
+        fix: ['Set CSP frame-ancestors and X-Frame-Options where applicable.', 'Show accurate client and scope information.', 'Do not auto-approve untrusted third-party clients.']
+      },
+      code: {
+        label: 'Step 5', title: 'Authorization code issued', risk: 'A code leaked through front-channel redirects is valuable only if the verifier is also compromised.',
+        body: 'The authorization server redirects the browser back with a short-lived authorization code. Internally, it stores metadata including client_id, redirect_uri, challenge, challenge method, expiry, and one-time-use status.',
+        code: `302 Location: https://client.example/callback?\n  code=SplxlOBeZQQYbYS6WxSbIA\n  state=opaque-correlation-value\n\nServer stores:\n  code -> client_id, redirect_uri, code_challenge, method, expires_at`,
+        fix: ['Make codes short-lived and single-use.', 'Bind code to client_id and redirect_uri.', 'Never place access tokens in the front channel.']
+      },
+      intercept: {
+        label: 'Attack point', title: 'Attacker intercepts authorization code', risk: 'Without PKCE, this can be enough to redeem tokens.',
+        body: 'The attacker may see the code through a malicious app link handler, log file, browser extension, proxy, referrer leak, or open redirect chain. PKCE prevents redemption because the attacker lacks the verifier.',
+        code: `Attacker has:\n  code = SplxlOBeZQQYbYS6WxSbIA\n\nAttacker does not have:\n  code_verifier = ?`,
+        fix: ['Protect redirect URIs and callback pages anyway.', 'Do not leak the verifier into URLs, logs, or third-party scripts.', 'Use Referrer-Policy and remove codes from browser history after processing.']
+      },
+      token: {
+        label: 'Step 6', title: 'Token request includes verifier', risk: 'Confidential clients still need client authentication; PKCE does not replace it.',
+        body: 'The legitimate client exchanges the code at the token endpoint and includes the original verifier. Public clients cannot keep a secret, but they can prove they know the verifier created at the start of this flow.',
+        code: `POST /token\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=authorization_code\n&code=SplxlOBeZQQYbYS6WxSbIA\n&redirect_uri=https://client.example/callback\n&client_id=spa-client\n&code_verifier=original-secret-verifier`,
+        fix: ['Require TLS.', 'For confidential clients, also require token endpoint authentication.', 'Do not accept a missing verifier when a challenge was used.']
+      },
+      verify: {
+        label: 'Step 7', title: 'Server verifies the proof', risk: 'Accepting mismatched method, missing verifier, or reused code breaks PKCE.',
+        body: 'The server recomputes the challenge from the submitted verifier using the stored method. If the result equals the stored challenge, the client has proven it is the same instance that initiated the flow.',
+        code: `computed = BASE64URL(SHA256(ASCII(code_verifier)))\nif constant_time_equal(computed, stored_code_challenge):\n    issue_tokens()\nelse:\n    invalid_grant`,
+        fix: ['Compare against the stored challenge for this code.', 'Invalidate the code on successful use and after expiry.', 'Return invalid_grant on mismatch without leaking details.']
+      },
+      tokens: {
+        label: 'Step 8', title: 'Tokens issued to legitimate client', risk: 'PKCE ends at token issuance; access token protection is a separate control set.',
+        body: 'Once the proof is valid, the server issues tokens according to policy. Continue with normal token security: least privilege scopes, rotation, sender-constrained tokens where appropriate, and safe storage.',
+        code: `HTTP/1.1 200 OK\n{\n  "access_token": "...",\n  "token_type": "Bearer",\n  "expires_in": 3600,\n  "refresh_token": "..."\n}`,
+        fix: ['Use short-lived access tokens.', 'Rotate refresh tokens for public clients.', 'Store tokens in the safest storage available for the platform.']
+      }
+    };
+
+    const flowEdges = [
+      ['node-start', 'node-challenge'], ['node-challenge', 'node-authorize'], ['node-authorize', 'node-login'],
+      ['node-login', 'node-code'], ['node-code', 'node-token'], ['node-code', 'node-intercept'],
+      ['node-token', 'node-verify'], ['node-verify', 'node-tokens']
+    ];
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+    }
+
+    function renderStep(id) {
+      const s = steps[id];
+      document.querySelectorAll('.node').forEach(n => n.classList.toggle('active', n.dataset.step === id));
+      document.getElementById('stepDetails').innerHTML = `
+        <div class="label">${escapeHtml(s.label)}</div>
+        <h3>${escapeHtml(s.title)}</h3>
+        <p>${escapeHtml(s.body)}</p>
+        <pre>${escapeHtml(s.code)}</pre>
+        <div class="status warn"><strong>Risk:</strong> ${escapeHtml(s.risk)}</div>
+        <h3 style="margin-top:18px;">Security controls</h3>
+        <ul>${s.fix.map(x => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+      `;
+    }
+
+    function center(el, container) {
+      const a = el.getBoundingClientRect();
+      const b = container.getBoundingClientRect();
+      return { x: a.left - b.left + a.width / 2, y: a.top - b.top + a.height / 2 };
+    }
+
+    function drawFlowArrows() {
+      const wrap = document.getElementById('flowWrap');
+      const svg = document.getElementById('flowSvg');
+      if (!wrap || !svg || window.innerWidth < 981) return;
+      const defs = svg.querySelector('defs').outerHTML;
+      svg.innerHTML = defs;
+      flowEdges.forEach(([fromId, toId]) => {
+        const from = document.getElementById(fromId);
+        const to = document.getElementById(toId);
+        if (!from || !to) return;
+        const a = center(from, wrap);
+        const b = center(to, wrap);
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const pad = 86;
+        const x1 = a.x + (dx / dist) * pad;
+        const y1 = a.y + (dy / dist) * pad;
+        const x2 = b.x - (dx / dist) * pad;
+        const y2 = b.y - (dy / dist) * pad;
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const mx = (x1 + x2) / 2;
+        const c1x = mx;
+        const c1y = y1;
+        const c2x = mx;
+        const c2y = y2;
+        path.setAttribute('d', `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', 'rgba(125,211,252,.62)');
+        path.setAttribute('stroke-width', '2.4');
+        path.setAttribute('marker-end', 'url(#arrow)');
+        svg.appendChild(path);
+      });
+    }
+
+    function b64urlFromBytes(bytes) {
+      let bin = '';
+      bytes.forEach(b => bin += String.fromCharCode(b));
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    }
+
+    function randomVerifier(length = 64) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+      const bytes = new Uint8Array(length);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, b => chars[b % chars.length]).join('');
+    }
+
+    async function sha256Base64Url(text) {
+      const bytes = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      return b64urlFromBytes(new Uint8Array(digest));
+    }
+
+    function isValidVerifier(v) {
+      return /^[A-Za-z0-9\-._~]{43,128}$/.test(v);
+    }
+
+    async function updateGenerator() {
+      const verifier = document.getElementById('verifierInput').value.trim();
+      const method = document.getElementById('challengeMethod').value;
+      const challengeEl = document.getElementById('challengeInput');
+      const status = document.getElementById('generatorStatus');
+      const meta = document.getElementById('verifierMeta');
+
+      meta.textContent = `${verifier.length} characters. Valid RFC 7636 verifier format: ${isValidVerifier(verifier) ? 'yes' : 'no'}.`;
+
+      if (!verifier) {
+        challengeEl.value = '';
+        status.className = 'status warn';
+        status.textContent = 'Enter or generate a verifier.';
+        renderApiBlocks('', method);
+        return;
+      }
+      if (!isValidVerifier(verifier)) {
+        challengeEl.value = '';
+        status.className = 'status bad';
+        status.textContent = 'Invalid verifier. Use 43 to 128 unreserved URI characters: A-Z a-z 0-9 - . _ ~';
+        renderApiBlocks('', method);
+        return;
+      }
+      const challenge = method === 'S256' ? await sha256Base64Url(verifier) : verifier;
+      challengeEl.value = challenge;
+      status.className = method === 'S256' ? 'status good' : 'status warn';
+      status.textContent = method === 'S256'
+        ? 'Valid S256 challenge derived from the verifier.'
+        : 'Plain method exposes the verifier-equivalent value in the authorize request. For internal platforms, reject it unless there is a documented legacy exception.';
+      renderApiBlocks(challenge, method);
+    }
+
+    function renderApiBlocks(challenge, method) {
+      const shownChallenge = challenge || '<computed_code_challenge>';
+      const verifier = document.getElementById('verifierInput')?.value.trim() || '<original_code_verifier>';
+      document.getElementById('authorizeBlock').innerHTML = escapeHtml(`GET https://auth.example.com/authorize?\n  response_type=code\n  client_id=client_123\n  redirect_uri=https://app.example.com/callback\n  scope=openid profile api.read\n  state=opaque_response_correlation\n  code_challenge=${shownChallenge}\n  code_challenge_method=${method}`);
+      document.getElementById('tokenBlock').innerHTML = escapeHtml(`POST https://auth.example.com/token\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=authorization_code\n&client_id=client_123\n&code=AUTHORIZATION_CODE\n&redirect_uri=https://app.example.com/callback\n&code_verifier=${verifier}\n\n# Confidential client also authenticates, for example:\n# Authorization: Basic base64(client_id:client_secret)`);
+    }
+
+    async function verifyAttempt() {
+      const storedChallenge = document.getElementById('challengeInput').value.trim();
+      const method = document.getElementById('challengeMethod').value;
+      const attempt = document.getElementById('attemptVerifier').value.trim();
+      const box = document.getElementById('verifyStatus');
+      if (!storedChallenge) {
+        box.className = 'status warn';
+        box.textContent = 'Generate a challenge first.';
+        return;
+      }
+      if (!isValidVerifier(attempt)) {
+        box.className = 'status bad';
+        box.textContent = 'Token endpoint rejects this request: submitted code_verifier is missing or invalid format.';
+        return;
+      }
+      const computed = method === 'S256' ? await sha256Base64Url(attempt) : attempt;
+      if (computed === storedChallenge) {
+        box.className = 'status good';
+        box.innerHTML = '<strong>Accepted:</strong> recomputed challenge matches the challenge stored with the authorization code. Tokens can be issued if all other checks pass.';
+      } else {
+        box.className = 'status bad';
+        box.innerHTML = '<strong>Rejected:</strong> invalid_grant. The submitted verifier does not match the stored PKCE challenge.';
+      }
+    }
+
+    const scenarioEvents = {
+      pkce: [
+        ['Client starts flow', 'Client generates verifier and sends only the S256 challenge to /authorize.'],
+        ['Authorization code issued', 'Authorization server stores code plus challenge metadata.'],
+        ['Attacker steals code', 'The code leaks, but the verifier is still only inside the legitimate client.'],
+        ['Attacker calls /token', 'The token request fails with invalid_grant because the attacker cannot prove the verifier.'],
+        ['Legitimate client calls /token', 'The server recomputes the challenge from the verifier and issues tokens.']
+      ],
+      nopkce: [
+        ['Client starts flow', 'No challenge is sent with the authorization request.'],
+        ['Authorization code issued', 'The code is not bound to a verifier.'],
+        ['Attacker steals code', 'The attacker has the only proof needed for code redemption.'],
+        ['Attacker calls /token', 'If other checks pass, the attacker may receive tokens.'],
+        ['Incident', 'PKCE would have blocked this code interception path.']
+      ],
+      plainmethod: [
+        ['Client starts flow', 'Client uses code_challenge_method=plain.'],
+        ['Authorize request observed', 'The code_challenge value is the verifier-equivalent value.'],
+        ['Attacker steals authorization code', 'The attacker now combines the stolen code with the observed plain challenge value.'],
+        ['Attacker calls /token', 'Because plain uses the verifier as the challenge, the proof can succeed.'],
+        ['Incident', 'S256 would have prevented deriving the verifier from the front-channel request.']
+      ],
+      leakedverifier: [
+        ['Client starts flow', 'PKCE is enabled, but the verifier is mishandled.'],
+        ['Verifier leaks', 'The verifier is placed in a URL, log, or third-party script can read it.'],
+        ['Attacker steals code and verifier', 'The attacker now has both pieces.'],
+        ['Attacker calls /token', 'The proof succeeds because the attacker can produce the verifier.'],
+        ['Incident', 'PKCE only works if the verifier stays secret until token exchange.']
+      ],
+      confnopkce: [
+        ['Backend client starts OAuth', 'The confidential client can authenticate to /token with a client_secret, but it does not use PKCE.'],
+        ['Attacker injects victim code', 'A stolen authorization code is delivered to the client callback in the attacker\'s browser/session context.'],
+        ['Backend redeems the code', 'The backend proves it is the registered client by using its client_secret.'],
+        ['Missing proof of flow instance', 'The token endpoint cannot tell whether this browser session initiated the code.'],
+        ['Incident', 'Victim resources can be linked into the wrong application session if other correlation checks also fail.']
+      ],
+      confpkce: [
+        ['Backend client starts OAuth', 'The confidential client also generates a verifier and stores it with the user session.'],
+        ['Attacker injects victim code', 'The code was issued for a different PKCE challenge than the attacker session expects.'],
+        ['Backend sends session verifier', 'The backend redeems with the verifier from the attacker\'s own session.'],
+        ['Server recomputes challenge', 'The computed challenge does not match the challenge stored with the injected code.'],
+        ['Blocked', 'The token endpoint returns invalid_grant, even though the client is confidential.']
+      ]
+    };
+    let scenarioStep = 0;
+
+    function renderScenario(reset = false) {
+      if (reset) scenarioStep = 0;
+      const mode = document.getElementById('scenarioMode').value;
+      const events = scenarioEvents[mode];
+      const log = document.getElementById('scenarioLog');
+      const status = document.getElementById('scenarioStatus');
+      log.innerHTML = '';
+      events.slice(0, scenarioStep).forEach((e, idx) => {
+        const div = document.createElement('div');
+        div.className = 'event';
+        div.innerHTML = `<div class="dot">${idx + 1}</div><div><h4>${escapeHtml(e[0])}</h4><p>${escapeHtml(e[1])}</p></div>`;
+        log.appendChild(div);
+      });
+      if (scenarioStep === 0) {
+        status.className = 'status';
+        status.textContent = 'Start the simulator.';
+      } else if ((mode === 'pkce' || mode === 'confpkce') && scenarioStep >= 4) {
+        status.className = 'status good';
+        status.textContent = mode === 'pkce'
+          ? 'S256 PKCE blocks the attacker from redeeming the intercepted code.'
+          : 'PKCE blocks confidential-client code injection by binding the code to the session verifier.';
+      } else if (['nopkce', 'plainmethod', 'leakedverifier', 'confnopkce'].includes(mode) && scenarioStep >= 4) {
+        status.className = 'status bad';
+        const messages = {
+          nopkce: 'Without PKCE, the stolen code can be enough.',
+          plainmethod: 'With plain, observing the authorize request can expose the verifier-equivalent value.',
+          leakedverifier: 'If the verifier leaks too, PKCE protection is bypassed.',
+          confnopkce: 'Client authentication alone does not bind the authorization code to the browser/session that initiated the flow.'
+        };
+        status.textContent = messages[mode];
+      } else {
+        status.className = 'status warn';
+        status.textContent = 'Flow in progress.';
+      }
+    }
+
+    function nextScenario() {
+      const mode = document.getElementById('scenarioMode').value;
+      scenarioStep = Math.min(scenarioStep + 1, scenarioEvents[mode].length);
+      renderScenario(false);
+    }
+
+    const trainingLabs = {
+      plainLab: {
+        title: 'Plain-method discussion',
+        body: 'Ask the team: if code_challenge_method=plain appears in an authorization request log, what has been exposed? Expected answer: the verifier-equivalent value. Control: require S256 and reject plain unless a documented legacy exception exists.'
+      },
+      confLab: {
+        title: 'Confidential-client discussion',
+        body: 'Ask the team: why does a client_secret not stop authorization-code injection? Expected answer: the secret authenticates the application, not the specific browser/session flow. Control: use PKCE and bind verifier/state to the initiating session.'
+      },
+      boundaryLab: {
+        title: 'PKCE boundary discussion',
+        body: 'Ask the team: a token is stolen after successful exchange. Does PKCE help? Expected answer: no. Control: short token lifetime, refresh rotation, safe storage, and sender-constrained tokens such as DPoP or mTLS for high-risk APIs.'
+      }
+    };
+
+    function renderTrainingLab(id) {
+      const lab = trainingLabs[id];
+      const panel = document.getElementById('trainingLabPanel');
+      if (!lab || !panel) return;
+      panel.innerHTML = `<strong>${escapeHtml(lab.title)}</strong><p>${escapeHtml(lab.body)}</p>`;
+      panel.className = 'status good';
+    }
+
+    const clientChecks = [
+      ['Generate verifier with a CSPRNG', 'Do not use predictable random functions or static values.'],
+      ['Use 43 to 128 unreserved URI characters', 'Allowed characters are A-Z, a-z, 0-9, hyphen, period, underscore, and tilde.'],
+      ['Use S256 challenge method', 'Plain should be treated as a legacy fallback, not a normal mode.'],
+      ['Keep verifier out of URLs and logs', 'The verifier is the secret; protect it until token exchange.'],
+      ['Keep state for response correlation', 'Use it to bind the callback to the browser session and restore UI state.'],
+      ['Use exact redirect URIs', 'PKCE does not replace redirect URI validation.']
+    ];
+    const serverChecks = [
+      ['Require PKCE for authorization code clients', 'RFC 9700 recommends PKCE broadly, including confidential clients.'],
+      ['Store challenge metadata with the code', 'Bind challenge, method, client_id, redirect_uri, expiry, and status.'],
+      ['Reject missing or mismatched verifier', 'Return invalid_grant without leaking sensitive comparison details.'],
+      ['Make authorization codes short-lived and single-use', 'Invalidate codes after successful redemption and on expiry.'],
+      ['Authenticate confidential clients', 'PKCE complements client authentication; it does not replace it.'],
+      ['Prefer S256 and restrict plain', 'Do not allow downgrade to plain when S256 is supported.']
+    ];
+
+    function renderChecklist() {
+      const render = (target, list, prefix) => {
+        document.getElementById(target).innerHTML = list.map((x, idx) => `
+          <label class="check-item">
+            <input type="checkbox" data-check="${prefix}-${idx}" />
+            <span><strong>${escapeHtml(x[0])}</strong><span class="muted">${escapeHtml(x[1])}</span></span>
+          </label>`).join('');
+      };
+      render('clientChecks', clientChecks, 'c');
+      render('serverChecks', serverChecks, 's');
+      document.querySelectorAll('[data-check]').forEach(cb => cb.addEventListener('change', updateProgress));
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const boxes = Array.from(document.querySelectorAll('[data-check]'));
+      const done = boxes.filter(b => b.checked).length;
+      const pct = boxes.length ? Math.round((done / boxes.length) * 100) : 0;
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressText').textContent = `${pct}% complete (${done}/${boxes.length})`;
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+    }
+
+    function currentAuthorizeUrl() {
+      return document.getElementById('authorizeBlock').textContent.trim();
+    }
+    function currentTokenRequest() {
+      return document.getElementById('tokenBlock').textContent.trim();
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+        setTimeout(drawFlowArrows, 50);
+      });
+    });
+
+    document.querySelectorAll('.node').forEach(n => n.addEventListener('click', () => renderStep(n.dataset.step)));
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      document.getElementById('verifierInput').value = randomVerifier(64);
+      await updateGenerator();
+      document.getElementById('attemptVerifier').value = document.getElementById('verifierInput').value;
+    });
+    document.getElementById('verifierInput').addEventListener('input', updateGenerator);
+    document.getElementById('challengeMethod').addEventListener('change', updateGenerator);
+    document.getElementById('verifyBtn').addEventListener('click', verifyAttempt);
+    document.getElementById('verifyLegitBtn').addEventListener('click', () => { document.getElementById('attemptVerifier').value = document.getElementById('verifierInput').value; verifyAttempt(); });
+    document.getElementById('verifyWrongBtn').addEventListener('click', () => { document.getElementById('attemptVerifier').value = randomVerifier(64); verifyAttempt(); });
+    document.getElementById('copyAuthorizeBtn').addEventListener('click', () => copyText(currentAuthorizeUrl()));
+    document.getElementById('copyTokenBtn').addEventListener('click', () => copyText(currentTokenRequest()));
+    document.getElementById('resetScenarioBtn').addEventListener('click', () => renderScenario(true));
+    document.getElementById('nextScenarioBtn').addEventListener('click', nextScenario);
+    document.getElementById('scenarioMode').addEventListener('change', () => renderScenario(true));
+    document.querySelectorAll('[data-lab]').forEach(btn => btn.addEventListener('click', () => renderTrainingLab(btn.dataset.lab)));
+    document.querySelectorAll('[data-quiz]').forEach(btn => btn.addEventListener('click', () => {
+      const box = document.getElementById('quizResult');
+      if (btn.dataset.quiz === 'right') {
+        box.className = 'status good';
+        box.textContent = 'Correct. The server recomputes the challenge from the submitted verifier. Without the original verifier, the stolen code cannot be redeemed.';
+      } else {
+        box.className = 'status bad';
+        box.textContent = 'Not quite. The purpose of PKCE is to make a stolen authorization code insufficient unless the attacker also has the verifier.';
+      }
+    }));
+
+    window.addEventListener('resize', drawFlowArrows);
+    window.addEventListener('load', async () => {
+      renderStep('start');
+      renderChecklist();
+      renderScenario(true);
+      renderApiBlocks('<computed_code_challenge>', 'S256');
+      document.getElementById('verifierInput').value = randomVerifier(64);
+      await updateGenerator();
+      document.getElementById('attemptVerifier').value = document.getElementById('verifierInput').value;
+      drawFlowArrows();
+    });
+  </script>
+</body>
+</html>
