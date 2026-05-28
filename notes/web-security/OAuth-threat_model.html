@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OAuth 2.0 / OIDC Threat Model Lifecycle - Interactive Flow v3</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #101a2e;
+      --panel-2: #14213a;
+      --text: #e8eefc;
+      --muted: #a8b4cf;
+      --line: #293956;
+      --accent: #7dd3fc;
+      --accent-2: #c084fc;
+      --good: #86efac;
+      --warn: #facc15;
+      --bad: #fb7185;
+      --chip: #203150;
+      --shadow: 0 22px 80px rgba(0, 0, 0, .35);
+      --radius: 22px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background:
+        radial-gradient(circle at top left, rgba(125, 211, 252, .16), transparent 28rem),
+        radial-gradient(circle at top right, rgba(192, 132, 252, .14), transparent 32rem),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .shell { width: min(1440px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 54px; }
+    header.hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 22px; align-items: stretch; margin-bottom: 22px; }
+    .hero-card, .side-card, .diagram-card, .details-card, .matrix-card, .footer-card, .learn-card {
+      background: linear-gradient(180deg, rgba(20, 33, 58, .92), rgba(16, 26, 46, .92));
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .hero-card { padding: 30px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 999px; background: rgba(125, 211, 252, .12); color: #bae6fd; border: 1px solid rgba(125, 211, 252, .24); font-size: 13px; font-weight: 800; letter-spacing: .02em; margin-bottom: 14px; }
+    h1 { font-size: clamp(32px, 4vw, 58px); line-height: .98; margin: 0 0 14px; letter-spacing: -.05em; }
+    .lead { font-size: 17px; line-height: 1.65; color: var(--muted); max-width: 86ch; margin: 0; }
+    .side-card { padding: 22px; }
+    .side-card h2, .details-card h2, .matrix-card h2, .footer-card h2, .learn-card h2 { font-size: 19px; margin: 0 0 12px; letter-spacing: -.01em; }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .metric { padding: 15px; border-radius: 18px; background: rgba(255, 255, 255, .055); border: 1px solid rgba(255, 255, 255, .07); }
+    .metric b { display: block; font-size: 26px; line-height: 1; margin-bottom: 7px; }
+    .metric span { color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .toolbar { position: sticky; top: 0; z-index: 20; margin: 0 0 22px; padding: 12px; border-radius: 20px; background: rgba(11, 18, 32, .86); border: 1px solid rgba(255, 255, 255, .08); backdrop-filter: blur(16px); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+    .tabs, .filters, .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    button, .pill { border: 1px solid rgba(255, 255, 255, .11); color: var(--text); background: rgba(255, 255, 255, .06); border-radius: 999px; padding: 9px 12px; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+    button:hover { transform: translateY(-1px); border-color: rgba(125, 211, 252, .55); }
+    button.active { background: rgba(125, 211, 252, .18); border-color: rgba(125, 211, 252, .56); color: #dff7ff; }
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, .75fr); gap: 22px; align-items: start; }
+    .diagram-card, .learn-card { padding: 20px; overflow: hidden; }
+    .diagram-head { display: flex; justify-content: space-between; gap: 16px; align-items: start; margin-bottom: 14px; }
+    .diagram-head p { margin: 5px 0 0; color: var(--muted); line-height: 1.45; }
+    .flow-wrap { position: relative; min-height: 650px; border-radius: 20px; background: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px), rgba(8, 13, 24, .44); background-size: 34px 34px; border: 1px solid rgba(255, 255, 255, .07); overflow: auto; padding: 18px; }
+    .flow-svg { position: absolute; left: 0; top: 0; width: 1180px; height: 620px; pointer-events: none; opacity: .95; z-index: 0; }
+    .lane-label { position: absolute; left: 18px; padding: 6px 10px; border-radius: 999px; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; z-index: 1; }
+    .lane-client { top: 30px; }
+    .lane-browser { top: 232px; }
+    .lane-server { top: 432px; }
+    .node { position: absolute; width: 180px; min-height: 100px; padding: 13px 13px 12px; border-radius: 20px; background: rgba(20, 33, 58, .96); border: 1px solid rgba(255, 255, 255, .12); box-shadow: 0 16px 38px rgba(0,0,0,.24); cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease, opacity .18s ease; outline: none; z-index: 2; }
+    .node:hover, .node:focus-visible { transform: translateY(-3px); border-color: rgba(125, 211, 252, .62); box-shadow: 0 20px 46px rgba(0,0,0,.33); }
+    .node.selected { background: linear-gradient(180deg, rgba(28, 48, 83, .98), rgba(20, 33, 58, .98)); border-color: rgba(125, 211, 252, .86); box-shadow: 0 0 0 3px rgba(125, 211, 252, .14), 0 22px 56px rgba(0,0,0,.38); }
+    .node.dimmed { opacity: .28; }
+    .node .num { display: inline-grid; place-items: center; width: 27px; height: 27px; border-radius: 10px; background: rgba(125, 211, 252, .16); color: #bae6fd; font-weight: 900; font-size: 13px; margin-bottom: 8px; }
+    .node h3 { margin: 0 0 6px; font-size: 15px; line-height: 1.16; letter-spacing: -.01em; }
+    .node p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .node .tag { margin-top: 10px; display: inline-flex; padding: 4px 8px; border-radius: 999px; background: rgba(251, 113, 133, .12); color: #fecdd3; font-size: 11px; font-weight: 800; }
+    .risk-bad { border-top: 4px solid var(--bad); }
+    .risk-warn { border-top: 4px solid var(--warn); }
+    .risk-good { border-top: 4px solid var(--good); }
+    .details-card { padding: 21px; position: sticky; top: 86px; }
+    .detail-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; background: var(--chip); border: 1px solid rgba(255,255,255,.08); color: #dbeafe; font-size: 12px; font-weight: 800; }
+    .detail-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08); }
+    .detail-section h3 { margin: 0 0 9px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #cbd5e1; }
+    ul.clean { padding-left: 18px; margin: 0; color: var(--muted); line-height: 1.55; }
+    ul.clean li { margin: 7px 0; }
+    .control-list li strong { color: var(--text); }
+    .impact { padding: 12px; border-radius: 16px; background: rgba(251, 113, 133, .10); border: 1px solid rgba(251, 113, 133, .18); color: #fecdd3; line-height: 1.55; font-size: 14px; }
+    .report-links { display: flex; flex-wrap: wrap; gap: 7px; }
+    .report-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 9px; border-radius: 999px; background: rgba(0,0,0,.22); border: 1px solid rgba(125,211,252,.18); color: #bfdbfe; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .report-link:hover { border-color: rgba(125,211,252,.55); text-decoration: none; }
+    .matrix-card, .footer-card { padding: 23px; margin-top: 22px; }
+    .matrix-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+    .bucket { padding: 16px; border-radius: 18px; background: rgba(255, 255, 255, .055); border: 1px solid rgba(255, 255, 255, .075); }
+    .bucket h3 { margin: 0 0 8px; font-size: 16px; }
+    .bucket p { margin: 0 0 12px; color: var(--muted); line-height: 1.5; font-size: 14px; }
+    .bucket .count { color: #bae6fd; font-weight: 900; }
+    .bucket-links { display: flex; flex-wrap: wrap; gap: 6px; max-height: 148px; overflow: auto; padding-right: 4px; }
+    .checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    .check { display: flex; gap: 10px; align-items: flex-start; padding: 13px; border-radius: 16px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.07); color: var(--muted); line-height: 1.45; font-size: 14px; }
+    .box { width: 20px; height: 20px; flex: 0 0 auto; border-radius: 7px; border: 1px solid rgba(134, 239, 172, .42); background: rgba(134, 239, 172, .11); margin-top: 1px; }
+    .check strong { color: var(--text); }
+    .tab-panel[hidden] { display: none; }
+    .learn-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, .8fr); gap: 22px; align-items: start; }
+    .learn-wrap { min-height: 520px; }
+    .learn-step { min-height: 118px; }
+    .api-card { background: rgba(8,13,24,.64); border: 1px solid rgba(255,255,255,.08); border-radius: 18px; padding: 14px; margin-top: 12px; }
+    .api-card h3 { margin: 0 0 8px; font-size: 15px; }
+    pre { margin: 0; overflow: auto; border-radius: 14px; padding: 12px; color: #dbeafe; background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.08); font-size: 12px; line-height: 1.55; }
+    .hl { color: #facc15; font-weight: 900; }
+    .ok { color: #86efac; font-weight: 900; }
+    .bad-text { color: #fb7185; font-weight: 900; }
+    .source-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .toast { position: fixed; right: 18px; bottom: 18px; background: #10243c; color: #e0f2fe; border: 1px solid rgba(125, 211, 252, .35); border-radius: 16px; padding: 12px 14px; box-shadow: var(--shadow); opacity: 0; transform: translateY(10px); transition: opacity .2s ease, transform .2s ease; z-index: 50; max-width: 360px; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (max-width: 1050px) { header.hero, .main-grid, .learn-grid { grid-template-columns: 1fr; } .details-card { position: static; } .matrix-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 720px) { .shell { width: min(100% - 18px, 1440px); padding-top: 12px; } .hero-card { padding: 22px; } .metric-grid, .matrix-grid, .checklist { grid-template-columns: 1fr; } .toolbar { position: static; } .flow-wrap { min-height: auto; padding-top: 56px; } .flow-svg { display: none; } .node { position: relative; left: auto !important; top: auto !important; width: 100%; margin: 10px 0; } .lane-label { display: none; } .bucket-links { max-height: none; } }
+    @media print { body { background: #fff; color: #111827; } .toolbar, .toast { display: none; } .hero-card, .side-card, .diagram-card, .details-card, .matrix-card, .footer-card, .learn-card, .node, .bucket, .check { box-shadow: none; background: #fff; color: #111827; border-color: #d1d5db; } .lead, .node p, .bucket p, .check, ul.clean { color: #374151; } a { color: #075985; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <section class="hero-card">
+        <div class="eyebrow">OAuth 2.0 threat model lifecycle + OIDC login notes</div>
+        <h1>Where OAuth and OIDC login flows break, and where to fix them.</h1>
+        <p class="lead">This interactive model maps OAuth 2.0 authorization bugs to the lifecycle stage where the control should live. When the flow is used for login, the artifact explicitly calls out OpenID Connect (OIDC) concepts such as ID tokens, nonce, issuer, audience, and subject.</p>
+      </section>
+      <aside class="side-card">
+        <h2>How to use this artifact</h2>
+        <p class="lead" style="font-size:14px;line-height:1.55">Click any block. The right panel shows precise failure conditions, impact, and remediation owned by that component. Report examples are links only, so the model does not overclaim report-specific details.</p>
+        <div class="metric-grid" aria-label="OAuth issue metrics">
+          <div class="metric"><b>80</b><span>HackerOne report links mapped</span></div>
+          <div class="metric"><b>7</b><span>Reusable fix families</span></div>
+          <div class="metric"><b>PKCE</b><span>Default proof-of-possession for auth-code flows</span></div>
+          <div class="metric"><b>ATO</b><span>Common outcome: account takeover or token/code theft</span></div>
+        </div>
+      </aside>
+    </header>
+
+    <nav class="toolbar" aria-label="Interactive controls">
+      <div class="tabs" role="tablist" aria-label="Page tabs">
+        <button class="active" data-tab="threat" role="tab" aria-selected="true">Threat Model</button>
+        <button data-tab="learn" role="tab" aria-selected="false">Learning OAuth</button>
+        <button data-tab="checklist" role="tab" aria-selected="false">Checklist</button>
+      </div>
+      <div class="filters" id="filters">
+        <button class="active" data-filter="all">All</button>
+        <button data-filter="redirect">Redirect / callback</button>
+        <button data-filter="leakage">Leakage / XSS</button>
+        <button data-filter="csrf">CSRF / consent</button>
+        <button data-filter="identity">Identity / scope</button>
+        <button data-filter="server">Server-side</button>
+        <button data-filter="token">Token lifecycle</button>
+      </div>
+      <div class="actions">
+        <button id="showHigh">Show high-risk only</button>
+        <button id="copyChecklist" style="display:none">Copy checklist</button>
+      </div>
+    </nav>
+
+    <section id="threatPanel" class="tab-panel">
+      <main class="main-grid">
+        <section class="diagram-card" aria-labelledby="diagram-title">
+          <div class="diagram-head">
+            <div>
+              <h2 id="diagram-title">Interactive OAuth threat-model flow</h2>
+              <p>Arrows are generated from the stage-to-stage edge list, so each arrow connects the correct block in the lifecycle order.</p>
+            </div>
+            <span class="pill">Authorization Code + PKCE</span>
+          </div>
+          <div class="flow-wrap" id="threatFlow">
+            <svg class="flow-svg" id="threatSvg" viewBox="0 0 1180 620" aria-hidden="true">
+              <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4f6b96"></path></marker></defs>
+            </svg>
+            <div class="lane-label lane-client">Client configuration and request</div>
+            <div class="lane-label lane-browser">Browser redirect and callback</div>
+            <div class="lane-label lane-server">Server token, session, API lifecycle</div>
+            <article class="node risk-warn selected" tabindex="0" data-id="register" style="left:50px;top:78px" data-tags="redirect identity server"><span class="num">0</span><h3>App registration</h3><p>Client, redirect URI, scopes, app metadata.</p><span class="tag">Design-time trust</span></article>
+            <article class="node risk-warn" tabindex="0" data-id="start" style="left:280px;top:78px" data-tags="csrf identity"><span class="num">1</span><h3>User starts flow</h3><p>Login, connect account, or authorize app.</p><span class="tag">Flow binding</span></article>
+            <article class="node risk-bad" tabindex="0" data-id="authreq" style="left:510px;top:78px" data-tags="redirect csrf leakage"><span class="num">2</span><h3>Authorization request</h3><p>response_type, client_id, redirect_uri, scope, state, PKCE.</p><span class="tag">High risk</span></article>
+            <article class="node risk-bad" tabindex="0" data-id="consent" style="left:740px;top:78px" data-tags="csrf identity leakage"><span class="num">3</span><h3>Consent screen</h3><p>User approves app and permissions.</p><span class="tag">Forced consent</span></article>
+            <article class="node risk-bad" tabindex="0" data-id="redirect" style="left:970px;top:78px" data-tags="redirect leakage csrf"><span class="num">4</span><h3>Callback redirect</h3><p>Authorization code returns to client.</p><span class="tag">Top failure point</span></article>
+            <article class="node risk-bad" tabindex="0" data-id="browser" style="left:970px;top:280px" data-tags="leakage redirect"><span class="num">5</span><h3>Browser landing page</h3><p>URL, referrer, scripts, images, postMessage.</p><span class="tag">Leakage</span></article>
+            <article class="node risk-bad" tabindex="0" data-id="token" style="left:740px;top:280px" data-tags="token server redirect"><span class="num">6</span><h3>Token exchange</h3><p>Code exchanged for access/refresh tokens.</p><span class="tag">Single-use code</span></article>
+            <article class="node risk-bad" tabindex="0" data-id="identity" style="left:510px;top:280px" data-tags="identity token"><span class="num">7</span><h3>Session and account link</h3><p>OIDC login maps identity to local account.</p><span class="tag">ATO risk</span></article>
+            <article class="node risk-warn" tabindex="0" data-id="api" style="left:280px;top:280px" data-tags="identity token server"><span class="num">8</span><h3>API access</h3><p>Use token for resource calls and scopes.</p><span class="tag">Scope enforcement</span></article>
+            <article class="node risk-warn" tabindex="0" data-id="refresh" style="left:50px;top:280px" data-tags="token server"><span class="num">9</span><h3>Refresh, revoke, logout</h3><p>Long-lived sessions and token rotation.</p><span class="tag">Lifecycle risk</span></article>
+          </div>
+        </section>
+
+        <aside class="details-card" aria-live="polite">
+          <h2 id="detailTitle">App registration</h2>
+          <p id="detailSummary" class="lead" style="font-size:14px;line-height:1.55"></p>
+          <div class="detail-meta" id="detailMeta"></div>
+          <div class="detail-section"><h3>Failure conditions</h3><ul class="clean" id="detailVulns"></ul></div>
+          <div class="detail-section"><h3>Impact</h3><div class="impact" id="detailImpact"></div></div>
+          <div class="detail-section"><h3>Remediation controls</h3><ul class="clean control-list" id="detailControls"></ul></div>
+          <div class="detail-section"><h3>Related report links</h3><div class="report-links" id="detailReports"></div></div>
+        </aside>
+      </main>
+
+      <section class="matrix-card" aria-labelledby="matrix-title">
+        <h2 id="matrix-title">Issue buckets mapped to shared fix components</h2>
+        <p class="lead" style="font-size:14px;line-height:1.55">These buckets are used for remediation planning: if the same component owns the control, the issue belongs in the same fix family.</p>
+        <div class="matrix-grid" id="bucketGrid"></div>
+      </section>
+
+    </section>
+
+    <section id="learnPanel" class="tab-panel" hidden>
+      <main class="learn-grid">
+        <section class="learn-card" aria-labelledby="learn-title">
+          <div class="diagram-head">
+            <div>
+              <h2 id="learn-title">Learning OAuth: Authorization Code + PKCE, with OIDC login notes</h2>
+              <p>Click a step to see the API request/response shape and the exact fields that matter for security review. OAuth 2.0 authorizes API access; OIDC adds authentication and ID tokens when scope includes openid.</p>
+            </div>
+            <span class="pill">OAuth 2.0 + OIDC where scope=openid</span>
+          </div>
+          <div class="flow-wrap learn-wrap" id="learnFlow">
+            <svg class="flow-svg" id="learnSvg" viewBox="0 0 1180 520" aria-hidden="true">
+              <defs><marker id="learnArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#4f6b96"></path></marker></defs>
+            </svg>
+            <article class="node learn-step risk-good selected" tabindex="0" data-learn-id="l1" style="left:60px;top:70px"><span class="num">1</span><h3>Build auth request</h3><p>Client sends browser to authorization endpoint.</p><span class="tag">/authorize</span></article>
+            <article class="node learn-step risk-good" tabindex="0" data-learn-id="l2" style="left:310px;top:70px"><span class="num">2</span><h3>User authenticates</h3><p>Authorization server logs in user and asks consent.</p><span class="tag">User + AS</span></article>
+            <article class="node learn-step risk-good" tabindex="0" data-learn-id="l3" style="left:560px;top:70px"><span class="num">3</span><h3>Callback with code</h3><p>Browser returns code and state to redirect_uri.</p><span class="tag">/callback</span></article>
+            <article class="node learn-step risk-good" tabindex="0" data-learn-id="l4" style="left:810px;top:70px"><span class="num">4</span><h3>Exchange code</h3><p>Public clients use PKCE; confidential clients also authenticate.</p><span class="tag">/token</span></article>
+            <article class="node learn-step risk-good" tabindex="0" data-learn-id="l5" style="left:560px;top:300px"><span class="num">5</span><h3>Call API</h3><p>Resource server checks bearer token and scopes.</p><span class="tag">Bearer token</span></article>
+            <article class="node learn-step risk-good" tabindex="0" data-learn-id="l6" style="left:310px;top:300px"><span class="num">6</span><h3>Refresh / revoke</h3><p>Client rotates or revokes long-lived access.</p><span class="tag">Lifecycle</span></article>
+          </div>
+        </section>
+
+        <aside class="details-card" aria-live="polite">
+          <h2 id="learnTitle">1. Build authorization request</h2>
+          <p id="learnSummary" class="lead" style="font-size:14px;line-height:1.55"></p>
+          <div class="api-card"><h3>API shape</h3><pre id="learnApi"></pre></div>
+          <div class="detail-section"><h3>Important fields to verify</h3><ul class="clean" id="learnImportant"></ul></div>
+          <div class="detail-section"><h3>Common mistake</h3><div class="impact" id="learnMistake"></div></div>
+          <div class="source-row">
+            <a class="report-link" href="https://datatracker.ietf.org/doc/html/rfc6749" target="_blank" rel="noopener">RFC 6749</a>
+            <a class="report-link" href="https://www.ietf.org/rfc/rfc9700.html" target="_blank" rel="noopener">RFC 9700</a>
+            <a class="report-link" href="https://openid.net/specs/openid-connect-core-1_0.html" target="_blank" rel="noopener">OIDC Core</a>
+          </div>
+        </aside>
+      </main>
+    </section>
+    <section id="checklistPanel" class="tab-panel" hidden>
+
+      <section class="footer-card" aria-labelledby="checklist-title">
+        <h2 id="checklist-title">Minimum OAuth / OIDC security checklist</h2>
+        <div class="checklist" id="checklist">
+          <div class="check"><span class="box"></span><div><strong>Redirect URIs:</strong> exact registered callback match after safe normalization; no wildcard, substring, or open redirect chain.</div></div>
+          <div class="check"><span class="box"></span><div><strong>State, nonce, and flow binding:</strong> use high-entropy state for response correlation and UI restoration; use OIDC nonce for ID-token replay protection; bind values to the initiating browser session as defense-in-depth.</div></div>
+          <div class="check"><span class="box"></span><div><strong>PKCE:</strong> require S256 PKCE for public clients and use it for modern authorization-code flows; PKCE proves possession of the original code verifier.</div></div>
+          <div class="check"><span class="box"></span><div><strong>Callback page:</strong> no third-party content; no tokens in URL fragments; remove code from URL after exchange.</div></div>
+          <div class="check"><span class="box"></span><div><strong>Referrer policy:</strong> use no-referrer or strict-origin on OAuth-sensitive pages.</div></div>
+          <div class="check"><span class="box"></span><div><strong>Clickjacking:</strong> apply CSP frame-ancestors and require explicit user consent for authorization actions.</div></div>
+          <div class="check"><span class="box"></span><div><strong>OAuth access tokens:</strong> validate issuer, audience, expiry, scopes, and token integrity by JWT validation or introspection before API access.</div></div>
+          <div class="check"><span class="box"></span><div><strong>OIDC login / account linking:</strong> validate ID-token issuer, audience, azp when present, signature, expiry, nonce, and subject; bind local accounts to issuer plus subject, not email alone unless email_verified is true and the provider is trusted.</div></div>
+          <div class="check"><span class="box"></span><div><strong>Scopes:</strong> enforce required scope and resource ownership server-side per endpoint.</div></div>
+          <div class="check"><span class="box"></span><div><strong>Token lifecycle:</strong> single-use codes, refresh-token rotation, replay detection, and transactional locking.</div></div>
+          <div class="check"><span class="box"></span><div><strong>Endpoint hardening:</strong> SSRF allowlists, no debug output, safe Host handling, and internal-network blocking.</div></div>
+          <div class="check"><span class="box"></span><div><strong>Client/mobile:</strong> validate TLS, protect deep links, and do not log or expose codes, tokens, client secrets, or refresh tokens.</div></div>
+        </div>
+      </section>
+    </section>
+
+  </div>
+
+  <div class="toast" id="toast">Copied checklist.</div>
+
+  <script>
+    const reports = {
+      1:['Shopify Stocky App OAuth Misconfiguration','740989'],2:["Chained Bugs to Leak Victim's Uber's FB Oauth Token",'202781'],3:['Insufficient OAuth callback validation leads to Periscope ATO','110293'],4:['OAuth redirect_uri IDN homograph token leakage','861940'],5:['Bypass email verification for OAuth grants','922456'],6:['Stealing Users OAuth authorization code via redirect_uri','1861974'],7:['Unauthenticated blind SSRF in OAuth Jira authorization controller','398799'],8:['Stealing Facebook OAuth Code Through Screenshot viewer','488269'],9:["Referer Leakage in SocialClub crew leads to FB OAuth token theft",'787160'],10:['OAuth token impersonation authentication bypass','739321'],11:['Misconfigured OAuth leads to Pre account takeover','1074047'],12:['Incorrect OAuth permissions screen allows DMs read','434763'],13:['Forced OAuth authorization using button ID in hash','2649615'],14:['CSRF on Periscope Web OAuth authorization endpoint','215381'],15:['Facebook OAuth Code Theft through referer leakage on support','482743'],16:['OAuth open redirect leading to phishing','3099816'],17:['Stealing OAuth Tokens through redirect_uri parameter','665651'],18:['Double Clickjacking on WakaTime OAuth authorization flow','3287060'],19:['Reflected XSS at oauth2/fallbacks/error','456333'],20:['Race Conditions in OAuth 2 API implementations','55140'],21:['Mattermost Server OAuth Flow XSS','1216203'],22:['Stealing OAuth Tokens via redirect_uri','405100'],23:['Comments widget login access code leakage','292783'],24:['Bypass social OAuth and take over account','729960'],25:['Gitlab OAuth Misconfiguration leads to ATO','541701'],26:['Twitter iOS fails certificate validation and sends OAuth token','168538'],27:['Smuggle SocialClub Facebook OAuth Code via Referer Leakage','342709'],28:['Broken OAuth changes user profile photo','642475'],29:['Image Injection may allow Facebook OAuth token theft','655288'],30:['account_info.read scope can change account name','1031240'],31:['Gitlab OAuth open redirect leading to ATO','677617'],32:['Debug information disclosure on oauth-redirector','315205'],33:['Open Redirect through POST Request in OAuth','1129761'],34:['OAuth 2 Authorization Bypass via CSRF and Cross Site Flashing','136582'],35:['OAuth whitelist host bypass and postMessage session access','875938'],36:['Critical - Steal OAuth Tokens','131202'],37:['XSS on OAuth authorize/authenticate endpoint','87040'],38:['Open redirect agegate may lead to Facebook OAuth token theft','798121'],39:['XSS in OAuth Redirect Url','163707'],40:['OAuth Misconfiguration Lead To Account Takeover','1212374'],41:['Account takeover via Pornhub OAuth','192648'],42:['Configure redirect URI for Facebook OAuth','140432'],43:['QIWI OAuth account takeover','159507'],44:['Insecure OAuth redirection at admin.8x8.vc','770548'],45:['Connection Reuse Ignores OAuth Bearer Token Mismatch','3595753'],46:['SocialClub Facebook OAuth theft through Warehouse XSS','316948'],47:['OAuth authorization page vulnerable to clickjacking','65825'],48:['Open redirection in OAuth','55525'],49:['Login CSRF using Twitter OAuth','2228'],50:['Coinbase Android leaks OAuth response code','5314'],51:['Stored XSS in OAuth redirect URI','261138'],52:['Image Injection on screenshot viewer may allow Facebook OAuth token theft','497655'],53:['Leaking Digits OAuth authorization to third party websites','166942'],54:['Open redirection in OAuth','405697'],55:['OAuth Stealing Attack','3930'],56:['Image Injection on Bully page may lead to FB OAuth token theft','659784'],57:['OAuth misconfiguration leads to account takeover','1815463'],58:['OAuth access_token stealing in Phabricator','3596'],59:['Race condition in OAuth 2.0 creates multiple valid sessions','699112'],60:['WordPress REST API OAuth bypass via Cross Site Flashing','176308'],61:['OAuth open redirect','7900'],62:['Broken Authentication including Slack OAuth bugs','2559'],63:['Image Injection on Bully page may lead to OAuth token theft','498358'],64:['Problem with OAuth','46485'],65:['Login CSRF using Twitter OAuth','13555'],66:['Registration bypass using OAuth logical bug','64946'],67:['Bug in OAuth Success Redirect URI Validation','753547'],68:['Image injection on careers may lead to Facebook OAuth theft','491654'],69:['State parameter missing on Google OAuth','2688'],70:['Flaw in login with Twitter to steal OAuth tokens','44492'],71:['Attach Pinterest account missing State/CSRF parameter','111218'],72:['XSS in Uber OAuth','131052'],73:['API OAuth Public Key disclosure in mobile app','160120'],74:['OAuth permission set as true authorizes malicious application','87561'],75:['OAuth Bug','9460'],76:['Image injection games info may lead to phishing or FB OAuth theft','510388'],77:['Cryptographic Side Channel in OAuth Library','31168'],78:['Login CSRF using Google OAuth','118737'],79:['Social OAuth Disconnect CSRF','1074869'],80:['OAuth redirect URI validation bug leads to account compromise','20661']
+    };
+    function reportLink(id) {
+      const r = reports[id];
+      if (!r) return '';
+      return `<a class="report-link" href="https://hackerone.com/reports/${r[1]}" target="_blank" rel="noopener">#${id} ${r[0]}</a>`;
+    }
+    const DATA = {
+      register:{title:'0. App registration',summary:'The client trust contract is created here: registered redirect URIs, client type, allowed scopes, app metadata, and allowed origins.',tags:['redirect','identity','server'],risk:'Medium to High',vulns:['Redirect URI allowlist uses wildcard, regex, substring, or partial host matching.','Registered callback host contains an open redirect endpoint.','Internationalized domain name is compared before canonical punycode normalization.','Consent text or scope label does not match the backend privilege.','Public client is issued or expected to protect a client secret.'],impact:'A weak registration policy gives attackers a valid-looking client configuration that can later steal authorization codes, mislead users, or request excess privilege.',controls:['<strong>Exact redirect match:</strong> compare scheme, host, port, path, and query according to a canonical registered URI.','<strong>No open redirect callbacks:</strong> do not allow redirect hosts that can forward the authorization response elsewhere.','<strong>IDN handling:</strong> compare canonical punycode and reject suspicious mixed-script callback domains.','<strong>Scope review:</strong> approve sensitive scopes and keep consent copy aligned with actual API permissions.','<strong>Client classification:</strong> treat browser/mobile/native clients as public clients and require PKCE.'],reports:[4,42,48,54,67,73,80]},
+      start:{title:'1. User starts login, account linking, or authorization',summary:'The user initiates sign-in, account linking, or app authorization. This step must bind the action to the browser session and to the user intent that started it.',tags:['csrf','identity'],risk:'Medium',vulns:['Missing response correlation value or reusable state.','Login CSRF links the victim browser to an attacker-controlled account.','Account linking starts without recent local authentication.','Connect and disconnect actions are accepted without CSRF protection or flow-purpose checks.'],impact:'The attacker can force the victim into the wrong OAuth flow, connect an attacker-controlled identity, or disconnect a legitimate social identity.',controls:['<strong>State / correlation:</strong> use high-entropy state for response correlation, UI restoration, and CSRF defense-in-depth; bind it to the initiating browser session.','<strong>SameSite cookies:</strong> use secure SameSite cookie settings for session-bound OAuth initiation.','<strong>Fresh auth:</strong> require recent local authentication before adding or removing social identities.','<strong>One purpose:</strong> separate login, link, and authorize flows with distinct state purpose values.'],reports:[49,65,69,71,78,79]},
+      authreq:{title:'2. Authorization request',summary:'The client sends the browser to the authorization endpoint with response_type=code, client_id, redirect_uri, scope, state, and a PKCE challenge. If scope includes openid, the flow is also an OIDC authentication request.',tags:['redirect','csrf','leakage'],risk:'High',vulns:['redirect_uri can be changed to attacker-controlled or lookalike domain.','state or equivalent response correlation is missing, predictable, not tied to session, or not checked on return.','PKCE challenge is missing or not using S256.','scope can be silently escalated or represented inaccurately.','Open redirect chain is accepted as part of the authorization request.'],impact:'The attacker can steal the authorization response, force authorization, or start a flow that returns to a malicious or unintended location.',controls:['<strong>Exact redirect URI validation:</strong> authorization server must reject non-registered redirect_uri values.','<strong>PKCE S256:</strong> require code_challenge and code_challenge_method=S256 for public clients and modern auth-code flows.','<strong>State / correlation:</strong> client stores and verifies state before accepting the callback; use it for UI restoration and defense-in-depth, not as the only control.','<strong>Scope controls:</strong> deny unexpected scopes and display exactly what will be granted.','<strong>No open redirect chaining:</strong> reject callbacks that forward code, state, or token to another location.'],reports:[2,3,4,6,11,13,17,22,25,31,40,57,70,80]},
+      consent:{title:'3. Consent screen',summary:'The authorization server authenticates the user and obtains explicit approval for the client and requested scopes.',tags:['csrf','identity','leakage'],risk:'High',vulns:['Authorization page can be framed or double-clickjacked.','Consent UI hides or misstates sensitive permission.','Hash, button ID, keyboard, or overlay trick causes unintended approval.','Legacy cross-domain behavior allows cross-site authorization action.'],impact:'A user may authorize a malicious client or grant a sensitive scope without understanding or intending the action.',controls:['<strong>Frame protection:</strong> use CSP frame-ancestors and reject embedded authorization pages.','<strong>Explicit consent:</strong> require a visible user action for new clients or new sensitive scopes.','<strong>Accurate labels:</strong> consent screen must match backend scope enforcement.','<strong>Interaction integrity:</strong> prevent overlay, hash-target, and double-click approval tricks.'],reports:[12,13,18,34,47,60,64,74]},
+      redirect:{title:'4. Callback redirect',summary:'The authorization server redirects the browser back to the registered client redirect_uri with an authorization code and the original state/correlation value.',tags:['redirect','leakage','csrf'],risk:'Critical',vulns:['Callback URI validation accepts attacker host, open redirect, path confusion, or scheme confusion.','Authorization code is sent to a page controlled by attacker.','Code is not bound to client_id, redirect_uri, and PKCE challenge.','Callback is accepted with missing or mismatched response correlation value.'],impact:'This is the highest-yield theft point: a stolen code can be redeemed for tokens unless PKCE, exact binding, and single-use redemption stop it.',controls:['<strong>Registered callback only:</strong> redirect only to exact registered URI.','<strong>Bind code:</strong> authorization code must be bound to client_id, redirect_uri, code_challenge, scope, and expiry.','<strong>Short lifetime:</strong> keep code lifetime short and mark it used atomically.','<strong>Validate correlation:</strong> client rejects callback before token exchange if state or equivalent flow binding is invalid.'],reports:[3,4,6,16,17,22,23,33,35,38,44,48,54,61,67,75,80]},
+      browser:{title:'5. Browser landing page',summary:'The browser loads the client callback page. Anything on this page can accidentally expose code, state, token fragments, or session data.',tags:['leakage','redirect'],risk:'Critical',vulns:['Referer header sends code or token to third-party images, scripts, links, or analytics.','XSS on OAuth endpoint or callback page reads authorization response.','Image injection, screenshot viewer, or user content forces the browser to load attacker resources.','postMessage sends OAuth data to wildcard or unchecked origin.','Token is left in URL fragment, history, logs, crash reports, or screenshots.'],impact:'The authorization response leaks before the server can redeem or clear it, allowing account takeover or unauthorized API access.',controls:['<strong>No third-party content:</strong> keep callback pages minimal and first-party only.','<strong>Referrer-Policy:</strong> set no-referrer on OAuth-sensitive pages.','<strong>CSP:</strong> restrict script, image, frame, connect, and form destinations.','<strong>Clear URL:</strong> exchange code server-side and remove sensitive parameters from browser history.','<strong>postMessage:</strong> require exact origin checks and never send secrets to wildcard targetOrigin.'],reports:[8,9,15,19,21,27,29,36,37,39,46,51,52,53,56,63,68,72,76]},
+      token:{title:'6. Token exchange',summary:'The client exchanges the authorization code for tokens. This endpoint must enforce code binding and prevent replay or race conditions.',tags:['token','server','redirect'],risk:'High',vulns:['Authorization code is not single-use or not redeemed atomically.','PKCE code_verifier is missing or checked incorrectly.','Code is accepted with a different redirect_uri or client_id than the original request.','Confidential client authentication is missing or bypassed.','OAuth helper endpoint exposes SSRF or debug behavior.'],impact:'A stolen or raced authorization code can become valid access, refresh, or session tokens.',controls:['<strong>Atomic redemption:</strong> mark the code used inside the same transaction that issues tokens.','<strong>Verify PKCE:</strong> recompute S256 challenge from code_verifier and compare exactly.','<strong>Enforce binding:</strong> verify client_id, redirect_uri, code_challenge, scope, and expiry.','<strong>Replay detection:</strong> alert and revoke on duplicate code redemption attempts.','<strong>Endpoint hardening:</strong> block SSRF, unsafe Host handling, and debug output.'],reports:[7,20,32,45,58,59]},
+      identity:{title:'7. Session creation and account linking',summary:'OAuth 2.0 authorizes API access. If the application is using social login or SSO, this stage is OpenID Connect: the app validates identity claims and maps the provider identity to a local account.',tags:['identity','token'],risk:'Critical',vulns:['Local account is matched by email without requiring email_verified.','Application accepts an access token or ID token issued for another audience or client_id.','Provider subject is read from an untrusted client-supplied field.','Social login bypasses registration, verification, or invite controls.','Local session is granted before state/correlation, PKCE, access-token, and OIDC checks complete.'],impact:'The attacker can impersonate a victim, link an attacker identity to the victim account, or bypass signup verification.',controls:['<strong>OAuth vs OIDC:</strong> use access tokens for API authorization; use OIDC ID tokens or UserInfo responses for authentication.','<strong>Validate OIDC ID token:</strong> verify issuer, audience, azp when present, signature, expiry, nonce, and subject.','<strong>Stable account key:</strong> bind local account to provider issuer plus subject, not email alone.','<strong>Verified email only:</strong> use email matching only when email_verified is true and the provider is trusted.','<strong>Complete flow first:</strong> create session only after state/correlation, PKCE, and token checks pass.'],reports:[1,5,10,24,25,28,30,40,41,43,62,66]},
+      api:{title:'8. API and resource access',summary:'The resource server receives bearer tokens and must make its own authorization decision for every protected operation.',tags:['identity','token','server'],risk:'Medium to High',vulns:['Read-only scope can call write endpoint.','Consent screen reports lower privilege than backend grants.','Resource server does not verify issuer or audience.','Connection reuse, cache, or pooling crosses bearer-token boundaries.','Tokens are logged or forwarded to third-party services.'],impact:'The client gains more power than intended, modifies resources with a read-only token, or crosses user boundaries through token confusion.',controls:['<strong>Per-endpoint checks:</strong> enforce scope, subject, tenant, and resource ownership for every API route.','<strong>Audience validation:</strong> resource server accepts only tokens intended for that API.','<strong>Token isolation:</strong> cache and connection pools must include token/user/security context.','<strong>Least privilege:</strong> issue narrow tokens with short lifetimes.','<strong>Audit decisions:</strong> log app, subject, scope, resource, and authorization result.'],reports:[12,28,30,45]},
+      refresh:{title:'9. Refresh, revoke, and logout',summary:'OAuth risk continues after initial login. Refresh tokens, revocation, mobile storage, and client-side TLS can extend compromise.',tags:['token','server'],risk:'Medium to High',vulns:['Refresh tokens are not rotated or replay-detected.','Logout kills only local session and leaves provider/app grants active.','Mobile app leaks code or token through logs, deep links, or invalid TLS validation.','Secrets are embedded in public clients.','OAuth library uses side-channel-prone comparisons.'],impact:'A one-time leak becomes persistent access, or client-side weaknesses expose tokens outside the normal browser flow.',controls:['<strong>Refresh rotation:</strong> rotate refresh tokens and revoke the token family on replay.','<strong>Revocation:</strong> revoke grants on disconnect, password reset, and high-risk events.','<strong>Secure storage:</strong> use platform keychain or keystore for mobile tokens.','<strong>TLS validation:</strong> never disable certificate or hostname validation.','<strong>Library hygiene:</strong> use maintained OAuth/OIDC libraries and constant-time comparisons.'],reports:[20,26,50,59,73,77]}
+    };
+    const buckets = [
+      ['A. Redirect / callback validation','Fix exact callback matching, IDN normalization, and open redirect chains.',[2,3,4,6,11,16,17,22,23,25,31,33,35,38,40,41,42,43,44,48,54,55,57,61,67,70,75,80]],
+      ['B. Front-end leakage / XSS','Fix referrer leaks, XSS, image injection, screenshot/media viewers, and third-party content on callbacks.',[8,9,15,19,21,27,29,36,37,39,46,50,51,52,53,56,58,63,68,72,76]],
+      ['C. CSRF / consent / clickjacking','Fix response correlation, SameSite/session binding, OIDC nonce where applicable, login CSRF, forced authorization, framing, and cross-site authorization actions.',[13,14,18,34,47,49,60,64,65,69,71,74,78,79]],
+      ['D. Identity / scope / audience','Fix account linking, email verification, token audience, consent accuracy, and scope enforcement.',[1,5,10,12,24,28,30,62,66]],
+      ['E. Server-side OAuth endpoints','Fix SSRF, debug leakage, unsafe Host handling, and egress controls in OAuth helper services.',[7,32]],
+      ['F. Token lifecycle / concurrency','Fix single-use code redemption, refresh rotation, replay detection, race conditions, and token-bound connection reuse.',[20,45,59]],
+      ['G. Mobile / TLS / crypto','Fix TLS validation, deep link handling, client storage, public config exposure, and crypto side-channel issues.',[26,50,73,77]]
+    ];
+    const threatEdges = [['register','start'],['start','authreq'],['authreq','consent'],['consent','redirect'],['redirect','browser'],['browser','token'],['token','identity'],['identity','api'],['api','refresh']];
+    const learnEdges = [['l1','l2'],['l2','l3'],['l3','l4'],['l4','l5'],['l5','l6']];
+    const LEARN = {
+      l1:{title:'1. Build authorization request',summary:'The client redirects the browser to the authorization server. The goal is to ask for an authorization code, not an access token directly in the browser.',api:`GET /authorize?\n  response_type=<span class="hl">code</span>\n  &client_id=<span class="hl">CLIENT_ID</span>\n  &redirect_uri=<span class="hl">https://client.example/callback</span>\n  &scope=openid%20profile%20api.read\n  &state=<span class="hl">RANDOM_SESSION_BOUND_VALUE</span>\n  &code_challenge=<span class="hl">BASE64URL_SHA256(code_verifier)</span>\n  &code_challenge_method=<span class="hl">S256</span>`,important:['response_type must be code for the authorization-code flow.','redirect_uri must match a pre-registered callback exactly.','state must be unguessable and bound to the initiating browser session.','code_challenge_method should be S256, not plain.'],mistake:'Do not place access tokens in the browser URL with implicit-style flows. Use an authorization code plus PKCE.'},
+      l2:{title:'2. User authenticates and consents',summary:'The authorization server authenticates the user and shows the client name plus requested scopes before approval.',api:`Authorization server checks:\n  client_id is known\n  redirect_uri is registered\n  requested scopes are allowed\n  user is authenticated\n  user approves the client`,important:['Client identity must be clear to the user.','Consent text must match actual backend privileges.','Authorization pages should not be frameable.','New sensitive scopes should require explicit consent.'],mistake:'Do not let UI tricks, clickjacking, or misleading permission text turn consent into silent authorization.'},
+      l3:{title:'3. Callback returns code and state',summary:'The authorization server sends the browser back to the client redirect_uri. The client must validate state before any token exchange.',api:`HTTP/1.1 302 Found\nLocation: https://client.example/callback?\n  code=<span class="hl">AUTHORIZATION_CODE</span>\n  &state=<span class="hl">SAME_VALUE_CLIENT_SENT</span>`,important:['The callback must be the exact registered URI.','The client must reject missing or mismatched state.','The authorization code should be short-lived.','The callback page should not load third-party content.'],mistake:'Do not exchange the code if state fails. Do not leave code or token values in browser history or referrer paths.'},
+      l4:{title:'4. Exchange code for tokens',summary:'The client sends the code to the token endpoint. The authorization server verifies PKCE and all original bindings before issuing tokens.',api:`POST /token\nContent-Type: application/x-www-form-urlencoded\n\ngrant_type=<span class="hl">authorization_code</span>\n&code=<span class="hl">AUTHORIZATION_CODE</span>\n&redirect_uri=<span class="hl">https://client.example/callback</span>\n&client_id=<span class="hl">CLIENT_ID</span>\n&code_verifier=<span class="hl">ORIGINAL_RANDOM_SECRET</span>\n\nResponse:\n{\n  "access_token": "...",\n  "token_type": "Bearer",\n  "expires_in": 3600,\n  "refresh_token": "optional"\n}`,important:['Code must be single-use and redeemed atomically.','code_verifier must match the original S256 challenge.','redirect_uri and client_id must match the original authorization request.','Confidential clients should authenticate to the token endpoint.'],mistake:'Do not accept the same code twice, with a different redirect_uri, or without the PKCE verifier.'},
+      l5:{title:'5. Call protected API',summary:'The client uses the access token against a resource server. The resource server must independently verify token claims and scopes.',api:`GET /api/resource\nAuthorization: Bearer <span class="hl">ACCESS_TOKEN</span>\n\nResource server verifies:\n  signature / introspection result\n  issuer (<span class="hl">iss</span>)\n  audience (<span class="hl">aud</span>)\n  subject (<span class="hl">sub</span>)\n  expiry (<span class="hl">exp</span>)\n  required scope`,important:['Resource server must validate audience and issuer.','Each endpoint must enforce the required scope.','Server must check tenant/user ownership, not just token validity.','Logs and analytics must not receive bearer tokens.'],mistake:'A valid token is not enough; it must be valid for this API, this operation, and this resource owner.'},
+      l6:{title:'6. Refresh, revoke, and logout',summary:'After the initial flow, the client may rotate refresh tokens, revoke grants, or end sessions. This stage determines how long compromise lasts.',api:`POST /token\ngrant_type=<span class="hl">refresh_token</span>\n&refresh_token=<span class="hl">CURRENT_REFRESH_TOKEN</span>\n\nPOST /revoke\ntoken=<span class="hl">TOKEN_TO_REVOKE</span>`,important:['Refresh tokens should rotate when used.','Replay of an old refresh token should revoke the token family.','Disconnect should revoke the app grant where appropriate.','Mobile clients should use platform secure storage.'],mistake:'Logout that only clears a local cookie may leave OAuth grants and refresh tokens active.'}
+    };
+    function list(items,target){ target.innerHTML = items.map(item => `<li>${item}</li>`).join(''); }
+    function reportLinks(ids){ return ids.map(reportLink).join(''); }
+    const nodes = Array.from(document.querySelectorAll('#threatFlow .node'));
+    const learnNodes = Array.from(document.querySelectorAll('#learnFlow .node'));
+    const detail = {title:document.getElementById('detailTitle'),summary:document.getElementById('detailSummary'),meta:document.getElementById('detailMeta'),vulns:document.getElementById('detailVulns'),impact:document.getElementById('detailImpact'),controls:document.getElementById('detailControls'),reports:document.getElementById('detailReports')};
+    const learnDetail = {title:document.getElementById('learnTitle'),summary:document.getElementById('learnSummary'),api:document.getElementById('learnApi'),important:document.getElementById('learnImportant'),mistake:document.getElementById('learnMistake')};
+    const toast = document.getElementById('toast');
+    let currentFilter = 'all';
+    let highOnly = false;
+    function selectNode(id){ const item = DATA[id]; nodes.forEach(n => n.classList.toggle('selected', n.dataset.id === id)); detail.title.textContent = item.title; detail.summary.textContent = item.summary; detail.meta.innerHTML = [`Risk: ${item.risk}`,...item.tags.map(t => t.charAt(0).toUpperCase()+t.slice(1))].map(t => `<span class="chip">${t}</span>`).join(''); list(item.vulns, detail.vulns); detail.impact.textContent = item.impact; list(item.controls, detail.controls); detail.reports.innerHTML = reportLinks(item.reports); }
+    function selectLearn(id){ const item = LEARN[id]; learnNodes.forEach(n => n.classList.toggle('selected', n.dataset.learnId === id)); learnDetail.title.textContent = item.title; learnDetail.summary.textContent = item.summary; learnDetail.api.innerHTML = item.api; list(item.important, learnDetail.important); learnDetail.mistake.textContent = item.mistake; }
+    function applyFilters(){ nodes.forEach(node => { const tags = node.dataset.tags.split(' '); const matchesFilter = currentFilter === 'all' || tags.includes(currentFilter); const matchesRisk = !highOnly || node.classList.contains('risk-bad'); node.classList.toggle('dimmed', !(matchesFilter && matchesRisk)); }); }
+    function drawEdges(flowId, svgId, edges, markerId, attrName){ const flow = document.getElementById(flowId); const svg = document.getElementById(svgId); const defs = svg.querySelector('defs').outerHTML; svg.innerHTML = defs; edges.forEach(([from,to]) => { const a = flow.querySelector(`[${attrName}="${from}"]`); const b = flow.querySelector(`[${attrName}="${to}"]`); if (!a || !b) return; const ax = a.offsetLeft + a.offsetWidth; const ay = a.offsetTop + a.offsetHeight/2; const bx = b.offsetLeft; const by = b.offsetTop + b.offsetHeight/2; let sx=ax, sy=ay, ex=bx, ey=by; if (Math.abs(bx-ax) > 20) { sx = ax; ex = bx; } else { sx = a.offsetLeft + a.offsetWidth/2; sy = a.offsetTop + a.offsetHeight; ex = b.offsetLeft + b.offsetWidth/2; ey = b.offsetTop; } if (bx < ax) { sx = a.offsetLeft; ex = b.offsetLeft + b.offsetWidth; } const path = document.createElementNS('http://www.w3.org/2000/svg','path'); const dx = Math.max(50, Math.abs(ex-sx)*0.35); const d = `M ${sx} ${sy} C ${sx + (ex>=sx?dx:-dx)} ${sy}, ${ex - (ex>=sx?dx:-dx)} ${ey}, ${ex} ${ey}`; path.setAttribute('d', d); path.setAttribute('fill','none'); path.setAttribute('stroke','#4f6b96'); path.setAttribute('stroke-width','2.2'); path.setAttribute('marker-end',`url(#${markerId})`); svg.appendChild(path); }); }
+    function renderBuckets(){ const grid = document.getElementById('bucketGrid'); grid.innerHTML = buckets.map(([title,desc,ids]) => `<article class="bucket"><h3>${title} <span class="count">${ids.length}</span></h3><p>${desc}</p><div class="bucket-links">${reportLinks(ids)}</div></article>`).join(''); }
+    nodes.forEach(node => { node.addEventListener('click', () => selectNode(node.dataset.id)); node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNode(node.dataset.id); } }); });
+    learnNodes.forEach(node => { node.addEventListener('click', () => selectLearn(node.dataset.learnId)); node.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectLearn(node.dataset.learnId); } }); });
+    document.getElementById('filters').addEventListener('click', (e) => { if (!e.target.matches('button')) return; document.querySelectorAll('#filters button').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); currentFilter = e.target.dataset.filter; applyFilters(); });
+    document.getElementById('showHigh').addEventListener('click', (e) => { highOnly = !highOnly; e.target.classList.toggle('active', highOnly); e.target.textContent = highOnly ? 'Showing high-risk only' : 'Show high-risk only'; applyFilters(); });
+    function setTab(tab){ document.querySelectorAll('.tabs button').forEach(b => { b.classList.toggle('active', b.dataset.tab === tab); b.setAttribute('aria-selected', b.dataset.tab === tab ? 'true' : 'false'); }); document.getElementById('threatPanel').hidden = tab !== 'threat'; document.getElementById('learnPanel').hidden = tab !== 'learn'; document.getElementById('checklistPanel').hidden = tab !== 'checklist'; document.getElementById('filters').style.display = tab === 'threat' ? 'flex' : 'none'; document.getElementById('showHigh').style.display = tab === 'threat' ? 'inline-flex' : 'none'; document.getElementById('copyChecklist').style.display = tab === 'checklist' ? 'inline-flex' : 'none'; setTimeout(() => { drawEdges('threatFlow','threatSvg',threatEdges,'arrow','data-id'); drawEdges('learnFlow','learnSvg',learnEdges,'learnArrow','data-learn-id'); }, 0); }
+    document.querySelector('.tabs').addEventListener('click', (e) => { if (!e.target.matches('button[data-tab]')) return; setTab(e.target.dataset.tab); });
+    document.getElementById('copyChecklist').addEventListener('click', async () => { const text = Array.from(document.querySelectorAll('#checklist .check')).map((el, i) => `${i+1}. ${el.innerText.trim()}`).join('\n'); try { await navigator.clipboard.writeText(text); toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); } catch (err) { alert(text); } });
+    window.addEventListener('resize', () => { drawEdges('threatFlow','threatSvg',threatEdges,'arrow','data-id'); drawEdges('learnFlow','learnSvg',learnEdges,'learnArrow','data-learn-id'); });
+    renderBuckets(); selectNode('register'); selectLearn('l1'); applyFilters(); setTab('threat'); drawEdges('threatFlow','threatSvg',threatEdges,'arrow','data-id'); drawEdges('learnFlow','learnSvg',learnEdges,'learnArrow','data-learn-id');
+  </script>
+</body>
+</html>
