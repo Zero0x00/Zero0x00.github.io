@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stanford CS: Python 3.11 Interactive DSA Cheat Sheet</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-accent: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --stanford-red: #8c1515;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --code-bg: #020617;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        aside {
+            width: 280px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--bg-accent);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand span {
+            color: var(--stanford-red);
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: var(--code-bg);
+            border: 1px solid var(--bg-accent);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .nav-links {
+            list-style: none;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--bg-accent);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 8px;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-blue);
+        }
+
+        /* Main Content Area */
+        main {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .section-header {
+            border-bottom: 1px solid var(--bg-accent);
+            padding-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .section-desc {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* Card Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--bg-accent);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .complexity {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--accent-green);
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .code-container {
+            position: relative;
+            background-color: var(--code-bg);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        pre {
+            padding: 15px;
+            overflow-x: auto;
+            font-family: 'Fira Code', Consolas, Monaco, 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        code {
+            color: #e2e8f0;
+        }
+
+        .keyword { color: #f43f5e; }
+        .builtin { color: #38bdf8; }
+        .comment { color: #64748b; font-style: italic; }
+        .string  { color: #e11d48; }
+        .number  { color: #fb923c; }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--bg-accent);
+            border: none;
+            color: var(--text-main);
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+        }
+
+        .pro-tip {
+            background-color: rgba(56, 189, 248, 0.05);
+            border-left: 3px solid var(--accent-blue);
+            padding: 10px;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+        }
+
+        .pro-tip strong {
+            color: var(--accent-blue);
+        }
+
+        /* Utility Hidden Class for Search */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-accent);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="brand"><span>★</span> Stanford CS</div>
+        <div class="subtitle">Python 3.11 DSA Companion</div>
+        
+        <input type="text" id="search" class="search-box" placeholder="Search syntax or patterns...">
+        
+        <ul class="nav-links">
+            <li class="nav-item active" data-target="basics">Basics & Mechanics <span class="tag">Base</span></li>
+            <li class="nav-item" data-target="lists">Lists / Arrays <span class="tag">O(1)</span></li>
+            <li class="nav-item" data-target="strings">Strings <span class="tag">Immut</span></li>
+            <li class="nav-item" data-target="hashmaps">HashMaps & Sets <span class="tag">O(1)</span></li>
+            <li class="nav-item" data-target="queues">Queues & Deques <span class="tag">O(1)</span></li>
+            <li class="nav-item" data-target="heaps">Heaps / Priority Q <span class="tag">O(log N)</span></li>
+            <li class="nav-item" data-target="controlflow">Control & Match <span class="tag">3.11</span></li>
+        </ul>
+    </aside>
+
+    <main id="content-viewport">
+        
+        <section id="basics" class="content-section">
+            <div class="section-header">
+                <h2 class="section-title">Basics & Core Mechanics</h2>
+                <p class="section-desc">Essential syntax structures required to construct algorithms without memory leaks or pointer bugs.</p>
+            </div>
+            <div class="grid mt-20">
+                <div class="card">
+                    <div class="card-title">Simultaneous Assignment & Swapping</div>
+                    <div class="card-desc">Swap variables or evaluate expressions atomically without an explicit temp variable. Essential for pointer variations.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="comment"># Swapping left and right pointers in-place</span>
+left, right = <span class="number">0</span>, len(arr) - <span class="number">1</span>
+arr[left], arr[right] = arr[right], arr[left]
+
+<span class="comment"># Unpacking values neatly</span>
+x, y, z = [<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>]</code></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Dividing with Precision Control</div>
+                    <div class="card-desc">DSA indices must always be integers. Avoid fractional index bugs when finding midpoints.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="comment"># Float division (Standard)</span>
+print(<span class="number">5</span> / <span class="number">2</span>)   <span class="comment"># Output: 2.5</span>
+
+<span class="comment"># Floor division (Truncates fraction, returns int)</span>
+mid = <span class="number">5</span> // <span class="number">2</span>   <span class="comment"># Output: 2 (Safe for array indexing)</span>
+
+<span class="comment"># Modulo (Remainder)</span>
+remainder = <span class="number">5</span> % <span class="number">2</span> <span class="comment"># Output: 1</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="lists" class="content-section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Lists (Dynamic Arrays)</h2>
+                <p class="section-desc">Python lists are dynamic arrays under the hood. Tracking sizing and modification time complexities is key.</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">Initialization Pitfalls <span class="complexity">Crucial Rule</span></div>
+                    <div class="card-desc">Never initialize a 2D matrix using multiplication. It duplicates references to the same inner list row.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="comment"># WRONG: Modifying one cell changes the entire column!</span>
+matrix = [[<span class="number">0</span>] * cols] * rows 
+
+<span class="comment"># CORRECT: Matrix Comprehension (Creates distinct rows)</span>
+matrix = [[<span class="number">0</span>] <span class="keyword">for</span> _ <span class="keyword">in</span> range(cols)] <span class="keyword">for</span> _ <span class="keyword">in</span> range(rows)]</code></pre>
+                    </div>
+                    <div class="pro-tip">
+                        <strong>Prof. Advice:</strong> Use the identifier `_` for variables you do not plan to read inside loops. It improves readability.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Common Operations <span class="complexity">O(1) vs O(N)</span></div>
+                    <div class="card-desc">Adding or removing from the end is fast; inserting or deleting at random indices shifts elements.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code>arr = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]
+arr.append(<span class="number">4</span>)    <span class="comment"># O(1) time - Adds to end -> [1,2,3,4]</span>
+arr.pop()        <span class="comment"># O(1) time - Removes last -> [1,2,3]</span>
+
+arr.insert(<span class="number">0</span>, <span class="number">99</span>) <span class="comment"># O(N) time - Dangerous! Shifts elements</span>
+arr.pop(<span class="number">0</span>)       <span class="comment"># O(N) time - Dangerous! Shifts elements</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Slicing Engine <span class="complexity">O(K)</span></div>
+                    <div class="card-desc">Extract subarrays easily using `[start:stop:step]`. Note that slicing copies elements.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code>nums = [<span class="number">0</span>, <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>]
+sub = nums[<span class="number">1</span>:<span class="number">4</span>]    <span class="comment"># Elements index 1 to 3 -> [1, 2, 3]</span>
+rev = nums[::-<span class="number">1</span>]   <span class="comment"># Reverse list completely</span>
+clone = nums[:]    <span class="comment"># Shallow copy of the list</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="strings" class="content-section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Strings (Immutable Arrays)</h2>
+                <p class="section-desc">Strings in Python cannot be edited in place. Modifying a character creates a complete copy of the string.</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">Efficient Modification Pattern <span class="complexity">O(N) vs O(N²)</span></div>
+                    <div class="card-desc">Do not update strings inside loops using `+=`. Instead, collect characters in a list and join them at completion.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="comment"># SLOW / BAD: Creates new memory allocations continuously</span>
+s = <span class="string">""</span>
+<span class="keyword">for</span> char <span class="keyword">in</span> arr: s += char 
+
+<span class="comment"># FAST / CORRECT: Linear time constructor</span>
+chars = []
+<span class="keyword">for</span> char <span class="keyword">in</span> arr:
+    chars.append(char)
+result = <span class="string">""</span>.join(chars) <span class="comment"># Single O(N) execution</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Conversion Tools</div>
+                    <div class="card-desc">Essential syntax for working with ASCII characters, parsing substrings, and validating string types.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="comment"># String to Integer conversion</span>
+val = int(<span class="string">"42"</span>)
+
+<span class="comment"># ASCII Integer conversion</span>
+ascii_val = ord(<span class="string">'a'</span>) <span class="comment"># Returns 97</span>
+char_val  = chr(<span class="number">97</span>)  <span class="comment"># Returns 'a'</span>
+
+<span class="comment"># Properties check</span>
+is_alpha = <span class="string">"abc"</span>.isalpha() <span class="comment"># True</span>
+is_digit = <span class="string">"123"</span>.isdigit() <span class="comment"># True</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="hashmaps" class="content-section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Dictionaries & Sets (Hash Tables)</h2>
+                <p class="section-desc">Provides $O(1)$ amortized insertion, deletion, and lookup times. Vital for frequency tracking and tracking visited nodes.</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">Safe Frequency Counter <span class="complexity">defaultdict</span></div>
+                    <div class="card-desc">Standard dicts throw a `KeyError` if looking up a missing key. Avoid checking `if key in dict` manually using `collections.defaultdict`.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="keyword">from</span> collections <span class="keyword">import</span> defaultdict
+
+<span class="comment"># Automatically populates a missing key with an integer (0)</span>
+counts = defaultdict(int)
+
+<span class="keyword">for</span> num <span class="keyword">in</span> [<span class="number">1</span>, <span class="number">2</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>]:
+    counts[num] += <span class="number">1</span> <span class="comment"># No KeyError! Safe configuration.</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Dictionary Traversals</div>
+                    <div class="card-desc">Iterate safely over keys, values, or key-value structures dynamically.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code>lookup = {<span class="string">"a"</span>: <span class="number">1</span>, <span class="string">"b"</span>: <span class="number">2</span>}
+
+<span class="comment"># Unpacking keys and values together</span>
+<span class="keyword">for</span> key, value <span class="keyword">in</span> lookup.items():
+    print(key, value)
+
+<span class="comment"># Standard fallback using default dict values</span>
+val = lookup.get(<span class="string">"z"</span>, <span class="number">0</span>) <span class="comment"># Returns 0 without breaking execution</span></code></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Sets <span class="complexity">O(1) Uniqueness</span></div>
+                    <div class="card-desc">Sets eliminate duplicates and support constant time checks for values.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code>visited = set()
+visited.add(<span class="number">5</span>)
+
+<span class="keyword">if</span> <span class="number">5</span> <span class="keyword">in</span> visited: <span class="comment"># O(1) Lookup complexity</span>
+    print(<span class="string">"Found"</span>)
+
+visited.remove(<span class="number">5</span>) <span class="comment"># Throws KeyError if missing</span>
+visited.discard(<span class="number">5</span>) <span class="comment"># Safe alternative: deletes if present</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="queues" class="content-section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Deques (Double-Ended Queues)</h2>
+                <p class="section-desc">Essential tool for Breadth-First Searches (BFS) and sliding window patterns. Faster than standard lists for popping items from the front.</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">FIFO Queue Implementation <span class="complexity">O(1) Efficiency</span></div>
+                    <div class="card-desc">Using `list.pop(0)` takes $O(N)$ time. `collections.deque` optimizes insertions and deletions on both ends to $O(1)$ time.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="keyword">from</span> collections <span class="keyword">import</span> deque
+
+queue = deque()
+queue.append(<span class="number">10</span>)      <span class="comment"># Push right</span>
+queue.append(<span class="number">20</span>)
+
+first_out = queue.popleft() <span class="comment"># O(1) Pop left -> Returns 10</span>
+
+<span class="comment"># Also works as an efficient stack</span>
+queue.appendleft(<span class="number">5</span>)
+last_out = queue.pop()</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="heaps" class="content-section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Heaps / Priority Queues</h2>
+                <p class="section-desc">Binary trees that retrieve the highest or lowest prioritized items in $O(\log N)$ time. Python only provides Min-Heaps natively.</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">Min-Heap & Max-Heap Core Mechanics <span class="complexity">O(log N)</span></div>
+                    <div class="card-desc">To implement a Max-Heap using `heapq`, multiply values by `-1` before pushing them into the heap.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="keyword">import</span> heapq
+
+heap = []
+<span class="comment"># Push operation (Min-Heap by default)</span>
+heapq.heappush(heap, <span class="number">4</span>)
+heapq.heappush(heap, <span class="number">1</span>)
+heapq.heappush(heap, <span class="number">8</span>)
+
+smallest = heapq.heappop(heap) <span class="comment"># Returns 1</span>
+
+<span class="comment"># Transforming a list into a heap in-place</span>
+data = [<span class="number">5</span>, <span class="number">3</span>, <span class="number">9</span>, <span class="number">1</span>]
+heapq.heapify(data) <span class="comment"># O(N) operational complexity</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="controlflow" class="content-section hidden">
+            <div class="section-header">
+                <h2 class="section-title">Control Loops & Pattern Matching</h2>
+                <p class="section-desc">Clean iterative loops and Python 3.11 pattern matching workflows for recursive tree traversals.</p>
+            </div>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">Structural Pattern Matching <span class="complexity">Python 3.11</span></div>
+                    <div class="card-desc">Replaces legacy nested `if-elif-else` structures. Matches structural layouts, such as evaluating coordinate pairs.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code><span class="comment"># Simplifies tree node type parsing</span>
+<span class="keyword">match</span> node:
+    <span class="keyword">case</span> <span class="builtin">None</span>:
+        <span class="keyword">return</span> <span class="number">0</span>
+    <span class="keyword">case</span> Node(left=<span class="builtin">None</span>, right=<span class="builtin">None</span>):
+        <span class="keyword">return</span> node.val
+    <span class="keyword">case</span> Node(left=l_node):
+        <span class="keyword">return</span> node.val + process(l_node)</code></pre>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Clean Loops & Unpacking</div>
+                    <div class="card-desc">Use built-in looping mechanisms like `enumerate` instead of tracking indices manually with separate variables.</div>
+                    <div class="code-container">
+                        <button class="copy-btn">Copy</button>
+                        <pre><code>names = [<span class="string">"alice"</span>, <span class="string">"bob"</span>, <span class="string">"charlie"</span>]
+
+<span class="comment"># BAD: tracking indices using a manual index variable</span>
+<span class="comment"># i = 0; for item in names: i += 1</span>
+
+<span class="comment"># GOOD: Clean tracking for elements and indices</span>
+<span class="keyword">for</span> idx, name <span class="keyword">in</span> enumerate(names):
+    print(f<span class="string">"Index: {idx}, Target: {name}"</span>)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Tab switching engine
+        const navItems = document.querySelectorAll('.nav-item');
+        const sections = document.querySelectorAll('.content-section');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // Clear active states
+                navItems.forEach(nav => nav.classList.remove('active'));
+                sections.forEach(sec => sec.classList.add('hidden'));
+
+                // Set active target state
+                item.classList.add('active');
+                const target = item.getAttribute('data-target');
+                document.getElementById(target).classList.remove('hidden');
+            });
+        });
+
+        // Instant filter search bar engine
+        const searchInput = document.getElementById('search');
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.card');
+
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            // Automatically display all sections when searching to surface relevant results
+            if (query !== "") {
+                sections.forEach(sec => sec.classList.remove('hidden'));
+            } else {
+                // Revert to displaying only the active tab when search box is cleared
+                const activeTab = document.querySelector('.nav-item.active').getAttribute('data-target');
+                sections.forEach(sec => {
+                    if (sec.id !== activeTab) sec.add('hidden');
+                });
+            }
+        });
+
+        // Copy button operations
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const preElement = btn.nextElementSibling;
+                const rawText = preElement.textContent;
+                
+                navigator.clipboard.writeText(rawText).then(() => {
+                    const originalText = btn.textContent;
+                    btn.textContent = "Copied!";
+                    btn.style.background = "var(--accent-green)";
+                    btn.style.color = "var(--bg-primary)";
+                    
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = "var(--bg-accent)";
+                        btn.style.color = "var(--text-main)";
+                    }, 1200);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
