@@ -3,29 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mohammad Arif | Product Security Engineer | AI/ML Security | DEFCON Speaker</title>
-  <meta name="description" content="Mohammad Arif is a Product Security Engineer and security researcher, DEFCON speaker, specializing in application security, cloud security, and transitioning into AI/ML security." />
+  <title>Mohammad Arif | Product Security &amp; AI Security</title>
+  <meta name="description" content="Mohammad Arif is a product security engineer, security researcher, and DEF CON speaker with 5+ years across AppSec, cloud, DevSecOps, and AI security." />
+  <meta name="author" content="Mohammad Arif" />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
   
-  <meta property="og:title" content="Mohammad Arif | Product Security Engineer | AI/ML Security" />
-  <meta property="og:description" content="Security researcher and DEFCON speaker specializing in product security, cloud security, and AI/ML security." />
+  <meta property="og:title" content="Mohammad Arif | Product Security &amp; AI Security" />
+  <meta property="og:description" content="Product security engineer, security researcher, and DEF CON speaker with 5+ years across AppSec, cloud, DevSecOps, and AI security." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://mohdarif.com/" />
-  <link rel="icon" href="/favicon.ico" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Mohammad Arif — Product Security Engineer, AI/ML Security, DEF CON & Black Hat speaker." />
+  <meta property="og:site_name" content="Mohammad Arif" />
+  <meta property="og:locale" content="en_US" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Mohammad Arif | Product Security &amp; AI Security" />
+  <meta name="twitter:description" content="Product security engineer, security researcher, and DEF CON speaker with 5+ years across AppSec, cloud, DevSecOps, and AI security." />
+  <meta name="twitter:image" content="https://mohdarif.com/og-image.png" />
+  <meta name="twitter:image:alt" content="Mohammad Arif — Product Security Engineer, AI/ML Security, DEF CON & Black Hat speaker." />
+
+  <meta name="theme-color" content="#08111f" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
   <link rel="canonical" href="https://mohdarif.com/" />
   <meta name="google-site-verification" content="oqOZiP1EpTiPxdHF70LWN3bVRcuwvaX2egKrFGhmCuk" />
 
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "Person",
-  "name": "Mohammad Arif",
-  "url": "https://mohdarif.com/",
-  "sameAs": [
-    "https://www.linkedin.com/in/mohd--arif/",
-    "https://github.com/Zero0x00"
-  ],
-  "jobTitle": "Product Security Engineer",
-  "description": "Security researcher and DEFCON speaker specializing in product security, cloud security, and AI/ML security."
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://mohdarif.com/#website",
+      "url": "https://mohdarif.com/",
+      "name": "Mohammad Arif",
+      "inLanguage": "en-US"
+    },
+    {
+      "@type": "Person",
+      "@id": "https://mohdarif.com/#person",
+      "name": "Mohammad Arif",
+      "url": "https://mohdarif.com/",
+      "mainEntityOfPage": { "@id": "https://mohdarif.com/#website" },
+      "sameAs": [
+        "https://www.linkedin.com/in/mohd--arif/",
+        "https://github.com/Zero0x00",
+        "https://www.credly.com/users/mohd-arif.9a87cc7c/badges#credly",
+        "https://www.credential.net/profile/mohammadarif01/wallet"
+      ],
+      "jobTitle": "Product Security Engineer",
+      "description": "Product security engineer, security researcher, and DEF CON speaker specializing in application security, cloud security, DevSecOps, and AI security.",
+      "knowsAbout": [
+        "Product Security",
+        "Application Security",
+        "Cloud Security",
+        "DevSecOps",
+        "Threat Modeling",
+        "Secure SDLC",
+        "AI Security",
+        "Adversarial Machine Learning",
+        "Agentic Penetration Testing",
+        "Bot and Account Takeover Protection"
+      ]
+    }
+  ]
 }
 </script>
   
@@ -136,6 +182,23 @@
       box-shadow: var(--shadow);
     }
 
+    .menu-toggle {
+      display: none;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      color: var(--text);
+      background: rgba(10,18,32,0.88);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
     .nav a,
     .button {
       color: var(--text);
@@ -219,6 +282,13 @@
       line-height: 1.8;
       color: var(--muted);
       max-width: 68ch;
+    }
+
+    .value-line {
+      margin: -2px 0 0;
+      color: var(--text);
+      font-weight: 700;
+      line-height: 1.6;
     }
 
     .hero-actions {
@@ -341,6 +411,10 @@
     .card p, .card li {
       color: var(--muted);
       line-height: 1.7;
+    }
+
+    .card li + li {
+      margin-top: 8px;
     }
 
     .timeline {
@@ -489,7 +563,56 @@
       .hero-main, .hero-side, .card, .timeline-item, .cta { padding: 20px; }
       h1 { font-size: 2.45rem; }
       .stat-grid { grid-template-columns: 1fr 1fr; }
-      .nav-inner { border-radius: 24px; }
+      .nav {
+        display: block;
+        padding-top: 10px;
+      }
+      .menu-toggle { display: flex; }
+      .menu-toggle[aria-expanded="true"] .menu-icon { transform: rotate(180deg); }
+      .menu-icon { transition: transform .2s ease; }
+      .nav-inner {
+        display: none;
+        width: 100%;
+        margin-top: 8px;
+        padding: 10px;
+        border-radius: 18px;
+        align-items: stretch;
+        justify-content: flex-start;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .nav-inner.open { display: flex; }
+      .nav a,
+      .dropdown-btn {
+        display: block;
+        width: 100%;
+        padding: 11px 12px;
+        text-align: left;
+      }
+      .dropdown-content,
+      .sub-dropdown-content {
+        position: static;
+        min-width: 0;
+        width: 100%;
+        max-height: 0;
+        overflow: hidden;
+        visibility: hidden;
+        opacity: 0;
+        transform: none;
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+      }
+      .dropdown.open > .dropdown-content,
+      .sub-dropdown.open > .sub-dropdown-content {
+        max-height: 520px;
+        visibility: visible;
+        opacity: 1;
+        padding: 6px 0;
+      }
+      .sub-dropdown-content a { padding-left: 28px; }
+      .hero { padding-top: 24px; }
+      .hero-actions .button { width: 100%; text-align: center; }
     }
 
     .dropdown {
@@ -592,36 +715,125 @@
     .dropdown-content a:hover,
     .sub-dropdown-btn:hover,
     .sub-dropdown-content a:hover {
-      background: #222;
-      color: #fff;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    /* Theme the dropdown to match the glass UI */
+    .dropdown-content {
+      background: rgba(12, 21, 39, 0.96);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+    .sub-dropdown-content {
+      background: rgba(16, 27, 49, 0.98);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+    .sub-dropdown-btn { color: var(--muted); }
+    .dropdown-content a,
+    .sub-dropdown-content a { color: var(--muted); }
+
+    /* Accessibility: visible keyboard focus */
+    a:focus-visible,
+    button:focus-visible,
+    .button:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+
+    /* Skip link */
+    .skip-link {
+      position: absolute;
+      left: 12px;
+      top: -60px;
+      z-index: 1000;
+      padding: 10px 16px;
+      background: var(--primary);
+      color: #06111b;
+      font-weight: 800;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: top .2s ease;
+    }
+    .skip-link:focus {
+      top: 12px;
+    }
+
+    /* Respect reduced-motion + always show content */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+      html { scroll-behavior: auto; }
+      .reveal {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .dropdown-content,
+      .sub-dropdown-content {
+        position: static;
+        top: auto;
+        left: auto;
+        min-width: 0;
+        width: 100%;
+        max-height: 0;
+        overflow: hidden;
+        visibility: hidden;
+        opacity: 0;
+        transform: none;
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+        pointer-events: none;
+      }
+      .dropdown.open > .dropdown-content,
+      .sub-dropdown.open > .sub-dropdown-content {
+        max-height: 520px;
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        padding: 6px 0;
+        pointer-events: auto;
+      }
     }
 
   </style>
+  <noscript><style>.reveal{opacity:1;transform:none;}</style></noscript>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <div class="bg-grid"></div>
   <div class="bg-orb"></div>
 
   <div class="wrap">
-    <div class="nav">
-      <div class="nav-inner">
+    <nav class="nav" aria-label="Primary">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-menu">
+        <span>Explore profile</span><span class="menu-icon" aria-hidden="true">▾</span>
+      </button>
+      <div class="nav-inner" id="primary-menu">
         <a href="#about">About</a>
         <a href="#experience">Experience</a>
+        <a href="#projects">Projects</a>
         <a href="#research">Research & Focus</a>
         <a href="#talks">Talks</a>
         <a href="#awards">Awards</a>
         <a href="#contact">Contact</a>
 
         <div class="dropdown">
-          <button class="dropdown-btn" aria-expanded="false">Notes ▾</button>
+          <button class="dropdown-btn" type="button" aria-expanded="false" aria-haspopup="true" aria-controls="notes-menu">Notes ▾</button>
 
-          <div class="dropdown-content">
+          <div class="dropdown-content" id="notes-menu">
 
             <!-- AWS -->
             <div class="sub-dropdown">
-              <button class="sub-dropdown-btn">AWS Security ▸</button>
-              <div class="sub-dropdown-content">
-                <a href="notes/aws-security/detection.html#" target="_blank" rel="noreferrer noopener">Domain Detection</a>
+              <button class="sub-dropdown-btn" type="button" aria-expanded="false" aria-controls="aws-notes">AWS Security ▸</button>
+              <div class="sub-dropdown-content" id="aws-notes">
+                <a href="notes/aws-security/detection.html" target="_blank" rel="noreferrer noopener">Domain Detection</a>
                 <a href="notes/aws-security/detection/guardduty_study_guide.html" target="_blank" rel="noreferrer noopener">GuardDuty</a>
                 <a href="notes/aws-security/detection/securityhub-study-guide.html" target="_blank" rel="noreferrer noopener">Security Hub</a>
               </div>
@@ -629,8 +841,8 @@
 
             <!-- LLM -->
             <div class="sub-dropdown">
-              <button class="sub-dropdown-btn">LLM Security ▸</button>
-              <div class="sub-dropdown-content">
+              <button class="sub-dropdown-btn" type="button" aria-expanded="false" aria-controls="llm-notes">LLM Security ▸</button>
+              <div class="sub-dropdown-content" id="llm-notes">
                 <a href="notes/LLM/llm-security-starter.html" target="_blank" rel="noreferrer noopener">LLM Security Starter</a>
                 <a href="notes/LLM/openai_prompting_embeddings.html" target="_blank" rel="noreferrer noopener">Prompt & Embeddings</a>
                 <a href="notes/LLM/attention_is_all_you_need.html" target="_blank" rel="noreferrer noopener">Attention Mechanism</a>
@@ -639,16 +851,16 @@
 
             <!-- MCP -->
             <div class="sub-dropdown">
-              <button class="sub-dropdown-btn">MCP ▸</button>
-              <div class="sub-dropdown-content">
+              <button class="sub-dropdown-btn" type="button" aria-expanded="false" aria-controls="mcp-notes">MCP ▸</button>
+              <div class="sub-dropdown-content" id="mcp-notes">
                 <a href="notes/MCP/github_mcp_issue.html" target="_blank" rel="noreferrer noopener">GitHub MCP</a>
               </div>
             </div>
 
             <!-- websecurity -->
             <div class="sub-dropdown">
-              <button class="sub-dropdown-btn">Web Security ▸</button>
-              <div class="sub-dropdown-content">
+              <button class="sub-dropdown-btn" type="button" aria-expanded="false" aria-controls="web-notes">Web Security ▸</button>
+              <div class="sub-dropdown-content" id="web-notes">
                 <a href="notes/web-security/OAuth-threat_model.html" target="_blank" rel="noreferrer noopener">OAuth threat_model</a>
                 <a href="notes/web-security/PKCE.html" target="_blank" rel="noreferrer noopener">PKCE</a>
                 
@@ -660,27 +872,29 @@
 
           </div>
         </div>
-        
-      </div>
-    </div>
 
+      </div>
+    </nav>
+
+    <main id="main">
     <section class="hero">
       <div class="hero-main glass reveal">
-        <div class="eyebrow">Security Researcher • Product Security • AI/ML Security Focus</div>
+        <div class="eyebrow">Product Security Engineer • Security Researcher • DEF CON Speaker</div>
         <h1><span class="gradient">Mohammad Arif</span></h1>
-        
-          <p class="lead">
-  Senior Product Security Engineer with 5+ years of experience securing modern products across web, API, mobile, cloud, and secure SDLC workflows. I am now extending that foundation into AI/ML security, with growing focus on adversarial ML, model abuse scenarios, and secure design for AI-enabled systems.
-          </p>
+        <p class="value-line">I turn security findings into scalable engineering controls.</p>
+        <p class="lead">
+          Product security engineer with 5+ years of experience securing web, API, mobile, cloud, and software delivery systems. I combine hands-on assessment with threat modeling, DevSecOps automation, and developer enablement—and apply that foundation to adversarial ML and secure AI product design.
+        </p>
         
         <div class="hero-actions">
-          <a class="button primary" href="mailto:mohammadarif1@toromail.csudh.edu">Let’s Connect</a>
-          <a class="button secondary" href="https://www.linkedin.com/in/mohd--arif/" target="_blank" rel="noreferrer noopener">LinkedIn</a>
+          <a class="button primary" href="/Mohammad_Arif_Resume.pdf" download>Download Resume</a>
+          <a class="button secondary" href="mailto:mohammadarif1@toromail.csudh.edu">Let’s Connect</a>
+          <a class="button secondary" href="https://www.linkedin.com/in/mohd--arif/" target="_blank" rel="me noreferrer noopener">LinkedIn</a>
           <a class="button secondary" href="https://arif-playbook.gitbook.io/100-days-of-ai-sec/" target="_blank" rel="noreferrer noopener">AI Security Notes</a>
         </div>
         <div class="ticker">
           <div class="pill">California, USA</div>
-          <div class="pill">DEFCON Speaker</div>
+          <div class="pill">DEF CON &amp; Black Hat Speaker</div>
           <div class="pill">AppSec • Cloud • Threat Modeling</div>
           <div class="pill">Open to impactful security work</div>
         </div>
@@ -702,12 +916,12 @@
           </div>
           <div class="stat">
             <div class="num">Global Talks</div>
-            <div class="label">Speaker and trainer at DEFCON, Black Hat, Seasides, c0c0n, and RedTeam Summit</div>
+            <div class="label">Speaker, trainer, and volunteer at DEF CON, Black Hat, BSidesSF, Seasides, c0c0n, and RedTeam Summit</div>
           </div>
         </div>
         <div class="mini">
           <strong>Current academic track</strong>
-          <span>M.S. in Cyber Security, California State University, Dominguez Hills — expected 2026.</span>
+          <span>M.S. in Cyber Security, California State University, Dominguez Hills — expected December 2026.</span>
         </div>
       </aside>
     </section>
@@ -715,20 +929,20 @@
     <section class="section" id="about">
       <div class="section-title reveal">
         <h2>What I bring</h2>
-        <p>I work at the intersection of offensive security, secure engineering, and program design — helping teams ship faster with better security posture.</p>
+        <p>I take ownership from investigation through implementation and validation—building practical controls, partnering closely with engineers, and using research to improve how products are defended.</p>
       </div>
       <div class="grid-3">
         <div class="card reveal">
-          <h3>Product Security Leadership</h3>
-          <p>Built and operationalized security review processes, threat modeling, release certification, secure coding enablement, and vulnerability management across engineering organizations.</p>
+          <h3>End-to-End Engineering Ownership</h3>
+          <p>Own security problems from threat modeling and hands-on testing through control design, implementation support, validation, and measurable follow-through.</p>
         </div>
         <div class="card reveal">
-          <h3>Hands-on Assessment Depth</h3>
-          <p>Strong execution across web, API, mobile, source code review, network assessment, AWS security, supply chain risk, and CI/CD security.</p>
+          <h3>Hands-on Product Defense</h3>
+          <p>Build and validate safeguards across web, APIs, mobile, cloud, CI/CD, and identity-abuse scenarios while working directly with product and engineering teams.</p>
         </div>
         <div class="card reveal">
-          <h3>Research-Driven Mindset</h3>
-          <p>Active in security communities, talks, workshops, and practical learning around adversarial ML and AI/ML security, with a bias toward real-world demonstrations.</p>
+          <h3>Research into Practice</h3>
+          <p>Prototype and evaluate AI/ML security, agentic penetration testing, model-abuse, and automated-analysis techniques—then translate the findings into practical controls.</p>
         </div>
       </div>
     </section>
@@ -739,6 +953,19 @@
         <p>A track record of improving coverage, reducing risk, and building practical security programs inside high-growth product environments.</p>
       </div>
       <div class="timeline">
+        <div class="timeline-item reveal">
+          <div class="time">Jun – Aug 2026</div>
+          <div>
+            <div class="company"><strong>Poshmark</strong><span>Product Security Intern</span></div>
+            <ul class="clean">
+              <li>Implemented security controls across product features and engineering workflows.</li>
+              <li>Reviewed and validated existing controls, identified security gaps, and recommended remediation priorities.</li>
+              <li>Built machine-learning models and analyzed security data to strengthen bot and account-takeover (ATO) protection.</li>
+              <li>Explored agentic penetration-testing workflows to improve the scale and repeatability of security validation.</li>
+            </ul>
+          </div>
+        </div>
+
         <div class="timeline-item reveal">
           <div class="time">Sep 2023 – Jul 2025</div>
           <div>
@@ -783,7 +1010,7 @@
           <div>
             <div class="company"><strong>Myntra</strong><span>Security Intern</span></div>
             <ul class="clean">
-              <li>Conducted security testing across 30+ projects with focus on high-impact findings.</li>
+              <li>Conducted security testing across 30+ applications with focus on high-impact findings.</li>
               <li>Built Jira-based workflows and dashboards to track remediation and SLA progress.</li>
             </ul>
           </div>
@@ -791,10 +1018,57 @@
       </div>
     </section>
 
+    <section class="section" id="projects">
+      <div class="section-title reveal">
+        <h2>Selected security engineering projects</h2>
+        <p>Practical tooling and programs built to move security earlier in delivery, increase visibility, and make secure decisions easier for engineers.</p>
+      </div>
+      <div class="split">
+        <div class="card reveal">
+          <h3>DevSecOps Automation & Tooling</h3>
+          <ul class="clean">
+            <li>Integrated Checkmarx SAST into CI/CD, blocking merges when high- or critical-severity findings were detected.</li>
+            <li>Automated SCA-to-Jira reconciliation so resolved dependency findings close without manual triage.</li>
+            <li>Created repository lifecycle guardrails that detect new repositories and enforce baseline controls from day one.</li>
+            <li>Built a GitHub Actions auditor for insecure workflow and software-supply-chain patterns.</li>
+          </ul>
+        </div>
+
+        <div class="card reveal">
+          <h3>Cloud Security &amp; Attack Paths</h3>
+          <ul class="clean">
+            <li>Developed offensive tooling to demonstrate AWS SNS and SQS abuse scenarios.</li>
+            <li>Built a Neo4j-based detector that maps cross-account attack paths within an AWS Organization.</li>
+            <li>Created a vulnerable AWS lab for hands-on exploitation of IAM and cloud misconfigurations.</li>
+            <li>Threat-modeled delivery pipelines and embedded preventive controls across CI/CD workflows.</li>
+          </ul>
+        </div>
+
+        <div class="card reveal">
+          <h3>AI &amp; ML Security Research</h3>
+          <ul class="clean">
+            <li>Built an interactive black-box attack lab around a deployed fraud-detection model, enabling users to probe and infer decision boundaries.</li>
+            <li>Created an AI-SAST benchmark covering vulnerable business logic and OWASP-style flaws for objective scanner comparison.</li>
+            <li>Publish practical research through the <a class="contact-link" href="https://arif-playbook.gitbook.io/100-days-of-ai-sec/" target="_blank" rel="noreferrer noopener">100 Days of AI Security</a> playbook.</li>
+          </ul>
+        </div>
+
+        <div class="card reveal">
+          <h3>Visibility &amp; Developer Enablement</h3>
+          <ul class="clean">
+            <li>Unified Jira, bug-bounty, and endpoint telemetry into one security-posture dashboard.</li>
+            <li>Built a self-service testing portal that creates correctly formatted and routed security-review tickets.</li>
+            <li>Created CTFs and vulnerable-versus-secure code labs used to train more than 100 engineers.</li>
+            <li>Authored Security Champion and shift-left playbooks that enabled teams to self-serve common security work.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="research">
       <div class="section-title reveal">
-        <h2>Technical Depth & Transition into AI/ML Security</h2>
-        <p>The profile below is optimized to show both practical industry experience and forward-looking security curiosity.</p>
+        <h2>Technical depth &amp; AI security focus</h2>
+        <p>A product-security foundation spanning application, cloud, and delivery systems—extended into the security of AI-enabled products.</p>
       </div>
       <div class="split">
         <div class="card reveal">
@@ -815,12 +1089,15 @@
             <span class="skill">AI/ML Security (Emerging Research Focus)</span>
             <span class="skill">Secure RAG Architecture</span>
             <span class="skill">Secure AI Systems</span>
+            <span class="skill">Agentic Penetration Testing</span>
+            <span class="skill">Bot &amp; ATO Protection</span>
+            <span class="skill">ML Security Analytics</span>
           </div>
         </div>
         <div class="card reveal">
           <h3>AI/ML Security Direction</h3>
             <p>
-              I am actively transitioning into AI/ML security by building on my background in product security, offensive testing, cloud security, and secure SDLC. My current focus includes adversarial machine learning, model abuse scenarios, and secure-by-design approaches for AI-enabled products.
+              I apply my background in product security, offensive testing, cloud security, and secure SDLC to adversarial machine learning, model-abuse scenarios, and secure-by-design approaches for AI-enabled products.
             </p>
             <p>
               I document this journey publicly through my <a class="contact-link" href="https://arif-playbook.gitbook.io/100-days-of-ai-sec/" target="_blank" rel="noreferrer noopener">100 Days of AI Security</a> playbook.
@@ -835,8 +1112,11 @@
         <p>I don’t just practice security — I teach, demo, and contribute to the communities that shape it.</p>
       </div>
       <div class="talks-list">
-        <div class="mini reveal"><strong>Black Hat – Tool Demonstration</strong><span>Invited speaker at Black Hat, demonstrating real-world security tooling and exploitation scenarios</span></div>
-        <div class="mini reveal"><strong>DEFCON 33 – AppSec & Cloud Demo</strong><span>Delivered live demonstration on application and cloud security techniques at DEFCON.</span></div>
+        <div class="mini reveal"><strong>DEF CON 34 AppSec Village – Tool Demonstration</strong><span>Presented <a class="contact-link" href="https://github.com/seedon198/Farsight" target="_blank" rel="noreferrer noopener">Farsight</a>, an OSINT and attack-surface intelligence tool, at AppSec Village.</span></div>
+        <div class="mini reveal"><strong>DEF CON 34 Cloud Village – Volunteer</strong><span>Volunteered with Cloud Village during DEF CON 34.</span></div>
+        <div class="mini reveal"><strong>BSidesSF 2026 – Speaker Operations Volunteer</strong><span>Supported speaker operations for the BSidesSF security community.</span></div>
+        <div class="mini reveal"><strong>Black Hat – Tool Demonstration</strong><span>Invited speaker at Black Hat, demonstrating real-world security tooling and exploitation scenarios.</span></div>
+        <div class="mini reveal"><strong>DEF CON 33 – AppSec &amp; Cloud Demo</strong><span>Delivered a live demonstration on application and cloud security techniques at DEF CON.</span></div>
         <div class="mini reveal"><strong>Seasides Cloud Village</strong><span>Demonstrated AWS metadata exploitation using SSRF with Burp Suite and real-world misconfigurations.</span></div>
         <div class="mini reveal"><strong>c0c0n Security Conference</strong><span>Presented modern web security risks and mitigation strategies focused on JavaScript and compliance.</span></div>
         <div class="mini reveal"><strong>Crac0n and Seasides Trainer</strong><span>Hands-on training on IAM abuse, cloud misconfigurations, and real-world attack scenarios.</span></div>
@@ -880,17 +1160,24 @@
         </div>
         <div class="contact-list">
           <div class="mini"><strong>Email</strong><a class="contact-link" href="mailto:mohammadarif1@toromail.csudh.edu">mohammadarif1@toromail.csudh.edu</a></div>
-          <div class="mini"><strong>Github</strong><a class="contact-link" href="https://github.com/Zero0x00" target="_blank" rel="noreferrer noopener">Zero0x00</a></div>
-          <div class="mini"><strong>LinkedIn</strong><a class="contact-link" href="https://www.linkedin.com/in/mohd--arif/" target="_blank" rel="noreferrer noopener">mohd--arif</a></div>
+          <div class="mini"><strong>GitHub</strong><a class="contact-link" href="https://github.com/Zero0x00" target="_blank" rel="me noreferrer noopener">Zero0x00</a></div>
+          <div class="mini"><strong>LinkedIn</strong><a class="contact-link" href="https://www.linkedin.com/in/mohd--arif/" target="_blank" rel="me noreferrer noopener">mohd--arif</a></div>
           <div class="mini"><strong>Credly</strong><a class="contact-link" href="https://www.credly.com/users/mohd-arif.9a87cc7c/badges#credly" target="_blank" rel="noreferrer noopener">Credly profile</a></div>
           <div class="mini"><strong>Credential.net</strong><a class="contact-link" href="https://www.credential.net/profile/mohammadarif01/wallet" target="_blank" rel="noreferrer noopener">Credential.net profile</a></div>
         </div>
       </div>
     </section>
 
-    <div class="footer">
-      
-    </div>
+    </main>
+
+    <footer class="footer">
+      <p>© 2026 Mohammad Arif · Product Security &amp; AI/ML Security · Built with HTML &amp; CSS</p>
+      <p style="margin-top:6px;">
+        <a class="contact-link" href="https://github.com/Zero0x00" target="_blank" rel="me noreferrer noopener">GitHub</a> ·
+        <a class="contact-link" href="https://www.linkedin.com/in/mohd--arif/" target="_blank" rel="me noreferrer noopener">LinkedIn</a> ·
+        <a class="contact-link" href="https://arif-playbook.gitbook.io/100-days-of-ai-sec/" target="_blank" rel="noreferrer noopener">AI Security Notes</a>
+      </p>
+    </footer>
   </div>
 
   <script>
@@ -905,15 +1192,53 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      const menuToggle = document.querySelector(".menu-toggle");
+      const primaryMenu = document.querySelector(".nav-inner");
       const dropdown = document.querySelector(".dropdown");
       if (!dropdown) return;
 
       const dropdownBtn = dropdown.querySelector(".dropdown-btn");
 
+      const closeSubmenus = () => {
+        dropdown.querySelectorAll(".sub-dropdown").forEach((submenu) => {
+          submenu.classList.remove("open");
+          const button = submenu.querySelector(".sub-dropdown-btn");
+          if (button) {
+            button.setAttribute("aria-expanded", "false");
+            button.textContent = button.textContent.replace("▾", "▸");
+          }
+        });
+      };
+
+      const closeDropdown = () => {
+        dropdown.classList.remove("open");
+        dropdownBtn.setAttribute("aria-expanded", "false");
+        closeSubmenus();
+      };
+
+      const closeMobileMenu = () => {
+        if (!menuToggle || !primaryMenu) return;
+        primaryMenu.classList.remove("open");
+        menuToggle.setAttribute("aria-expanded", "false");
+        closeDropdown();
+      };
+
+      if (menuToggle && primaryMenu) {
+        menuToggle.addEventListener("click", () => {
+          const isOpen = primaryMenu.classList.toggle("open");
+          menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        });
+
+        primaryMenu.querySelectorAll('a[href^="#"]').forEach((link) => {
+          link.addEventListener("click", closeMobileMenu);
+        });
+      }
+
       // Toggle main dropdown
       dropdownBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        dropdown.classList.toggle("open");
+        const isOpen = dropdown.classList.toggle("open");
+        dropdownBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
       });
 
       // Submenus
@@ -930,6 +1255,7 @@
               // Reset arrow of others
               const otherBtn = sd.querySelector(".sub-dropdown-btn");
               if (otherBtn) {
+                otherBtn.setAttribute("aria-expanded", "false");
                 otherBtn.textContent = otherBtn.textContent.replace("▾", "▸");
               }
             }
@@ -940,28 +1266,32 @@
 
           // 🔥 Toggle arrow for current
           if (parent.classList.contains("open")) {
+            btn.setAttribute("aria-expanded", "true");
             btn.textContent = btn.textContent.replace("▸", "▾");
           } else {
+            btn.setAttribute("aria-expanded", "false");
             btn.textContent = btn.textContent.replace("▾", "▸");
           }
         });
       });
 
       // Close when clicking outside
-      document.addEventListener("click", () => {
-        dropdown.classList.remove("open");
-        dropdown.querySelectorAll(".sub-dropdown").forEach(sd => {
-          sd.classList.remove("open");
-        });
+      document.addEventListener("click", (event) => {
+        if (!dropdown.contains(event.target)) closeDropdown();
       });
 
       // ESC key support
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
-          dropdown.classList.remove("open");
-          dropdown.querySelectorAll(".sub-dropdown").forEach(sd => {
-            sd.classList.remove("open");
-          });
+          closeMobileMenu();
+          if (menuToggle && window.innerWidth <= 640) menuToggle.focus();
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 640 && menuToggle && primaryMenu) {
+          primaryMenu.classList.remove("open");
+          menuToggle.setAttribute("aria-expanded", "false");
         }
       });
 
