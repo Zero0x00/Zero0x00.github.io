@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kubernetes Series, Part 2: Supply Chain Security | Mohammad Arif</title>
+  <meta name="description" content="Part 2 of a Kubernetes security series: check what goes into your images and manifests with Syft, Grype, Trivy, kube-linter and kubesec, and choose a registry safely." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/kubernetes/k8s-part-2-supply-chain.html" />
+  <meta property="og:title" content="Kubernetes Series, Part 2: Supply Chain Security" />
+  <meta property="og:description" content="Check what goes into your images and manifests, and where you store them." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a>
+
+  <header>
+    <div class="eyebrow">Kubernetes Security Series · Part 2 of 3</div>
+    <h1>Supply Chain Security</h1>
+    <p class="sub">The images you run are built from code you did not write. Check what is inside them before they reach the cluster.</p>
+    <div class="byline">By Mohammad Arif · 8 min read · <a href="k8s-part-1-introduction.html">← Part 1: How Kubernetes works</a></div>
+  </header>
+
+  <p>In Part 1, the Deployment pointed at an image: <code>registry.example.com/web:1.4.2</code>. Kubernetes runs whatever that name points to and asks no questions. This part is about what is inside that image, where it is stored, and how it is deployed.</p>
+
+  <h2>1. What "supply chain" means</h2>
+  <p>It is everything that ends up in what you run: the libraries your code uses, the base image, the registry that stores the image, and the YAML that deploys it. An attacker only needs one weak link. Your own code can be perfect and you can still run someone else's bug.</p>
+  <p>Log4Shell (2021) is the best-known example. One logging library had a remote code execution flaw, and it was inside thousands of images, often several layers down. Most teams could not quickly answer "which of our images contain it?" That question is a big part of this post.</p>
+
+  <figure><svg viewBox="0 0 760 346" role="img" aria-label="Five stages from dependencies to the cluster, with what goes wrong and what helps at each stage"><defs><marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="21" y="18" class="t-h">STAGE</text><rect class="hl" x="21" y="28" width="134" height="52" rx="10"/><text x="88.0" y="59" text-anchor="middle" class="t-b">Dependencies</text><path class="ln" d="M155 54H167" marker-end="url(#b1)"/><rect class="hl" x="167" y="28" width="134" height="52" rx="10"/><text x="234.0" y="59" text-anchor="middle" class="t-b">Base image</text><path class="ln" d="M301 54H313" marker-end="url(#b1)"/><rect class="hl" x="313" y="28" width="134" height="52" rx="10"/><text x="380.0" y="59" text-anchor="middle" class="t-b">Registry</text><path class="ln" d="M447 54H459" marker-end="url(#b1)"/><rect class="hl" x="459" y="28" width="134" height="52" rx="10"/><text x="526.0" y="50" text-anchor="middle" class="t-b">Manifests</text><text x="526.0" y="68" text-anchor="middle" class="t-b">(YAML)</text><path class="ln" d="M593 54H605" marker-end="url(#b1)"/><rect class="hl" x="605" y="28" width="134" height="52" rx="10"/><text x="672.0" y="59" text-anchor="middle" class="t-b">Cluster</text><text x="21" y="106" class="t-h" style="fill:#fb7185">WHAT GOES WRONG</text><rect class="risk" x="21" y="116" width="134" height="76" rx="10"/><text x="88.0" y="140" text-anchor="middle" class="t-s">Known CVEs,</text><text x="88.0" y="157" text-anchor="middle" class="t-s">typosquatted or</text><text x="88.0" y="174" text-anchor="middle" class="t-s">hijacked packages</text><rect class="risk" x="167" y="116" width="134" height="76" rx="10"/><text x="234.0" y="140" text-anchor="middle" class="t-s">Old, bloated</text><text x="234.0" y="157" text-anchor="middle" class="t-s">image, dev tools</text><text x="234.0" y="174" text-anchor="middle" class="t-s">and secrets inside</text><rect class="risk" x="313" y="116" width="134" height="76" rx="10"/><text x="380.0" y="140" text-anchor="middle" class="t-s">Public images you</text><text x="380.0" y="157" text-anchor="middle" class="t-s">did not check,</text><text x="380.0" y="174" text-anchor="middle" class="t-s">tags overwritten</text><rect class="risk" x="459" y="116" width="134" height="76" rx="10"/><text x="526.0" y="140" text-anchor="middle" class="t-s">Root, privileged,</text><text x="526.0" y="157" text-anchor="middle" class="t-s">no limits,</text><text x="526.0" y="174" text-anchor="middle" class="t-s">unsafe Helm chart</text><rect class="risk" x="605" y="116" width="134" height="76" rx="10"/><text x="672.0" y="140" text-anchor="middle" class="t-s">Anything that</text><text x="672.0" y="157" text-anchor="middle" class="t-s">passes through</text><text x="672.0" y="174" text-anchor="middle" class="t-s">gets run</text><text x="21" y="222" class="t-h" style="fill:#34d399">WHAT HELPS</text><rect class="ok" x="21" y="232" width="134" height="76" rx="10"/><text x="88.0" y="256" text-anchor="middle" class="t-s">Lockfiles,</text><text x="88.0" y="273" text-anchor="middle" class="t-s">small list,</text><text x="88.0" y="290" text-anchor="middle" class="t-s">Trivy / Grype</text><rect class="ok" x="167" y="232" width="134" height="76" rx="10"/><text x="234.0" y="256" text-anchor="middle" class="t-s">Slim base,</text><text x="234.0" y="273" text-anchor="middle" class="t-s">multi-stage,</text><text x="234.0" y="290" text-anchor="middle" class="t-s">scan + SBOM (Syft)</text><rect class="ok" x="313" y="232" width="134" height="76" rx="10"/><text x="380.0" y="256" text-anchor="middle" class="t-s">Private registry,</text><text x="380.0" y="273" text-anchor="middle" class="t-s">immutable tags,</text><text x="380.0" y="290" text-anchor="middle" class="t-s">deploy by digest</text><rect class="ok" x="459" y="232" width="134" height="76" rx="10"/><text x="526.0" y="256" text-anchor="middle" class="t-s">kube-linter,</text><text x="526.0" y="273" text-anchor="middle" class="t-s">kubesec,</text><text x="526.0" y="290" text-anchor="middle" class="t-s">trivy config</text><rect class="ok" x="605" y="232" width="134" height="76" rx="10"/><text x="672.0" y="256" text-anchor="middle" class="t-s">Admission policy:</text><text x="672.0" y="273" text-anchor="middle" class="t-s">approved registry</text><text x="672.0" y="290" text-anchor="middle" class="t-s">only</text></svg><figcaption>Figure 1. Where things can go wrong between your dependencies and the running cluster, and what helps at each stage.</figcaption></figure>
+
+  <h2>2. Dependencies</h2>
+  <p>Most code in an image is not yours. It comes from <code>npm</code>, <code>pip</code>, Maven, Go modules and OS packages. What goes wrong:</p>
+  <ul>
+    <li><strong>Known vulnerabilities:</strong> an old library with a public CVE. This is the most common problem.</li>
+    <li><strong>Typosquatting:</strong> a malicious package with a name close to a real one (<code>reqeusts</code> instead of <code>requests</code>).</li>
+    <li><strong>Dependency confusion:</strong> you use an internal package name, and a public package with the same name and a higher version gets installed instead.</li>
+    <li><strong>Taken-over packages:</strong> a real package gets a bad new release after its maintainer's account is hijacked.</li>
+  </ul>
+  <p>What helps: commit lockfiles and install from them (<code>npm ci</code>, <code>pip install --require-hashes</code>) so you always get the versions you reviewed, keep the dependency list small, and scan it regularly (next sections).</p>
+
+  <h2>3. The base image</h2>
+  <p>A full OS image carries a shell, a package manager and hundreds of packages your app never uses. Each one is attack surface and a possible CVE. A smaller base image (<code>slim</code>, Alpine, distroless) has fewer.</p>
+<pre><code># stage 1: build and test, with all the tools
+FROM node:22 AS build
+WORKDIR /app
+COPY . .
+RUN npm ci &amp;&amp; npm test &amp;&amp; npm run build
+
+# stage 2: the image you ship, with runtime packages only
+FROM node:22-slim
+WORKDIR /app
+COPY --from=build /app/dist ./dist
+COPY package*.json ./
+RUN npm ci --omit=dev
+USER node
+CMD ["node", "dist/server.js"]</code></pre>
+  <ul>
+    <li>Use a multi-stage build so compilers and test tools stay in the first stage.</li>
+    <li>Run as a non-root user.</li>
+    <li>Do not copy secrets into the image. Anyone who can pull the image can read every layer, even if a later layer deletes the file.</li>
+    <li>Rebuild regularly, so fixes in the base image reach you.</li>
+  </ul>
+  <p><strong>Tags can change, digests cannot.</strong> <code>web:1.4.2</code> is only a label, and whoever can push to the registry can point it at different content. A digest is a hash of the image, so it always means one image.</p>
+<pre><code>image: registry.example.com/web:1.4.2                 # can change
+image: registry.example.com/web@sha256:3f1a...c9e2    # cannot change</code></pre>
+  <p>Deploy by digest. Never use <code>latest</code>.</p>
+
+  <h2>4. Tools: Syft, Grype and Trivy</h2>
+  <p>Three tools cover most of what you need for images.</p>
+  <div class="tbl"><table>
+    <tr><th>Tool</th><th>What it does</th><th>Example</th></tr>
+    <tr><td><strong>Syft</strong></td><td>Lists everything inside an image: every package and version. This list is the SBOM.</td><td><code>syft web:1.4.2 -o cyclonedx-json &gt; sbom.json</code></td></tr>
+    <tr><td><strong>Grype</strong></td><td>Checks an image, or an SBOM, against vulnerability databases and reports known CVEs.</td><td><code>grype sbom:./sbom.json --fail-on high</code></td></tr>
+    <tr><td><strong>Trivy</strong></td><td>All in one: finds CVEs in images, finds secrets, and checks config files such as Dockerfiles and Kubernetes YAML.</td><td><code>trivy image --severity HIGH,CRITICAL web:1.4.2</code></td></tr>
+  </table></div>
+
+  <figure><svg viewBox="0 0 760 270" role="img" aria-label="Syft makes an SBOM from an image, Grype scans it for CVEs; kube-linter and kubesec check manifests; Trivy covers all of it">
+<defs><marker id="b2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs>
+<text x="20" y="22" class="t-h">CHECKS THE IMAGE</text>
+<rect class="n" x="20" y="36" width="110" height="60" rx="10"/><text x="75" y="62" text-anchor="middle" class="t-b">Image</text><text x="75" y="80" text-anchor="middle" class="t-s">web:1.4.2</text>
+<rect class="hl" x="170" y="36" width="110" height="60" rx="10"/><text x="225" y="62" text-anchor="middle" class="t-b">Syft</text><text x="225" y="80" text-anchor="middle" class="t-s">lists packages</text>
+<rect class="n" x="320" y="36" width="90" height="60" rx="10"/><text x="365" y="62" text-anchor="middle" class="t-b">SBOM</text><text x="365" y="80" text-anchor="middle" class="t-s">the list</text>
+<rect class="hl" x="450" y="36" width="110" height="60" rx="10"/><text x="505" y="62" text-anchor="middle" class="t-b">Grype</text><text x="505" y="80" text-anchor="middle" class="t-s">finds known CVEs</text>
+<rect class="risk" x="600" y="36" width="140" height="60" rx="10"/><text x="670" y="62" text-anchor="middle" class="t-b">Report</text><text x="670" y="80" text-anchor="middle" class="t-s">fix or fail the build</text>
+<path class="ln" d="M130 66H170" marker-end="url(#b2)"/><path class="ln" d="M280 66H320" marker-end="url(#b2)"/><path class="ln" d="M410 66H450" marker-end="url(#b2)"/><path class="ln" d="M560 66H600" marker-end="url(#b2)"/>
+<text x="20" y="130" class="t-h">CHECKS THE YAML</text>
+<rect class="n" x="20" y="144" width="110" height="52" rx="10"/><text x="75" y="166" text-anchor="middle" class="t-b">Manifest</text><text x="75" y="184" text-anchor="middle" class="t-s">or Helm chart</text>
+<rect class="hl" x="170" y="144" width="130" height="52" rx="10"/><text x="235" y="166" text-anchor="middle" class="t-b">kube-linter</text><text x="235" y="184" text-anchor="middle" class="t-s">best-practice rules</text>
+<rect class="hl" x="340" y="144" width="130" height="52" rx="10"/><text x="405" y="166" text-anchor="middle" class="t-b">kubesec</text><text x="405" y="184" text-anchor="middle" class="t-s">security score</text>
+<rect class="risk" x="510" y="144" width="140" height="52" rx="10"/><text x="580" y="166" text-anchor="middle" class="t-b">Findings</text><text x="580" y="184" text-anchor="middle" class="t-s">fix before apply</text>
+<path class="ln" d="M130 170H170" marker-end="url(#b2)"/><path class="ln" d="M300 170H340" marker-end="url(#b2)"/><path class="ln" d="M470 170H510" marker-end="url(#b2)"/>
+<rect class="ok" x="20" y="218" width="720" height="38" rx="10"/><text x="380" y="242" text-anchor="middle" class="t-b">Trivy: image CVEs, secrets and YAML checks in one tool</text>
+</svg><figcaption>Figure 2. Which tool checks what. Syft and Grype work as a pair. Trivy covers both sides in one tool.</figcaption></figure>
+
+  <p>Syft and Grype are made by the same project (Anchore) and are meant to work together: Syft makes the list, Grype checks it. Trivy does both in one command, which is simpler to start with. Many teams use one pair and pick whichever is easier to run.</p>
+  <p><strong>Scanning has limits.</strong> It only finds <em>known</em> problems, and only the ones in the database today. A clean scan does not mean an image is safe. An image that was clean last month can have a critical CVE now, so rescan what is already running, not only new builds. Also agree on how fast you will fix each severity, or the report just becomes a list nobody reads.</p>
+
+  <h2>5. SBOMs, and the dev and test trap</h2>
+  <p>A Software Bill of Materials (SBOM) is the list Syft produces. Its value shows up when the next Log4Shell lands: you search your SBOMs and know in minutes which images are affected. The common formats are SPDX and CycloneDX.</p>
+  <p>There are two traps, and both come from development and test dependencies.</p>
+  <h3>Trap 1: an SBOM from source code over-reports</h3>
+  <p>Your project lists libraries for building and testing (test frameworks, linters, bundlers) next to the ones the app needs to run. If you generate the SBOM from the source folder or lockfile, those can show up even though they never reach the final image. You then chase CVEs that cannot affect production, and the real findings get lost in the noise. Whether dev dependencies are included depends on the tool and the language, so check what your output actually contains.</p>
+<pre><code># from source: may include dev and test packages
+syft dir:. -o cyclonedx-json &gt; sbom-source.json
+
+# from the built image: only what ships
+syft web:1.4.2 -o cyclonedx-json &gt; sbom-image.json</code></pre>
+  <p>Generate the SBOM from the <strong>final image</strong>. It describes what is actually deployed.</p>
+  <h3>Trap 2: dev dependencies end up in the image</h3>
+  <p>The reverse problem. If the Dockerfile runs a plain <code>npm install</code> or installs <code>requirements-dev.txt</code> in the final stage, test tools ship to production. They add CVEs and give an attacker more tools. This is what the multi-stage build above prevents: tests run in stage 1, and stage 2 installs runtime packages only (<code>--omit=dev</code>).</p>
+  <div class="box"><p>A quick check: compare the two SBOMs above. Packages that appear in the source one but not in the image one are your dev and test dependencies. Packages that appear in the image one but should not be there (a test framework, a compiler) mean something leaked into the final stage.</p></div>
+
+  <h2>6. Registry: private or public</h2>
+  <p>The registry stores your images until a node pulls them. Where you pull from, and where you push to, both matter.</p>
+  <div class="tbl"><table>
+    <tr><th></th><th>Public registry (Docker Hub, public repos)</th><th>Private registry</th></tr>
+    <tr><td>Who can push</td><td>Anyone can publish images, including ones with names that look like official ones</td><td>Only people and systems you allow</td></tr>
+    <tr><td>What you trust</td><td>Whatever the publisher put in. It can change without notice</td><td>Only what you copied in and checked</td></tr>
+    <tr><td>Your own images</td><td>Anyone can pull them and read the layers, including any secrets left inside</td><td>Access controlled</td></tr>
+    <tr><td>Scanning and control</td><td>Not in your hands</td><td>Scan on push, set retention, use immutable tags</td></tr>
+    <tr><td>Availability</td><td>Pull limits and outages can break your deployments</td><td>Under your control</td></tr>
+  </table></div>
+  <p>The practical setup:</p>
+  <ul>
+    <li>Store your own images in a <strong>private</strong> registry only.</li>
+    <li>Do not let the cluster pull straight from public registries. Copy the base images you need into your private registry, scan them there, and deploy from there.</li>
+    <li>Turn on immutable tags, so a tag cannot be overwritten.</li>
+    <li>Give nodes pull-only credentials, and limit who can push.</li>
+    <li>Scan images in the registry on a schedule, not just once.</li>
+  </ul>
+
+  <h2>7. Check your YAML: kube-linter and kubesec</h2>
+  <p>A safe image can still be deployed in an unsafe way. The Part 1 manifest had no <code>securityContext</code> and no resource limits. Two small tools check manifests for this before you apply them. They read YAML and do not look at images.</p>
+  <div class="tbl"><table>
+    <tr><th>Tool</th><th>What it does</th><th>Example</th></tr>
+    <tr><td><strong>kube-linter</strong></td><td>Checks manifests and Helm charts against a list of best practices: running as root, privileged containers, missing resource limits, the <code>latest</code> tag, writable root filesystem, and more.</td><td><code>kube-linter lint ./k8s/</code></td></tr>
+    <tr><td><strong>kubesec</strong></td><td>Gives a manifest a security score and lists what would improve it, such as setting <code>runAsNonRoot</code> or dropping capabilities.</td><td><code>kubesec scan deployment.yaml</code></td></tr>
+  </table></div>
+  <p>Trivy can also check manifests with <code>trivy config ./k8s/</code>, so if you already use it, that may be enough. Run these tools every time a manifest changes, and fix findings before the manifest reaches the cluster. Review Helm charts from the internet the same way. A chart can create privileged Pods and broad RBAC rules, so read what it will create with <code>helm template</code> before installing.</p>
+
+  <h2>8. Enforce it in the cluster</h2>
+  <p>Scanning only helps if the cluster refuses what fails. Part 1 showed that every request passes through admission before it is stored. A policy engine such as Kyverno or OPA Gatekeeper can use that step to enforce simple rules:</p>
+  <ul>
+    <li>Images must come from your private registry, and nowhere else.</li>
+    <li>Images must be referenced by digest, and <code>latest</code> is rejected.</li>
+    <li>Pods must not be privileged and must run as non-root.</li>
+  </ul>
+  <p>Start in audit mode to see what would be blocked, fix the violations, then switch to enforce.</p>
+
+  <h2>Where to start</h2>
+  <ol>
+    <li>Use a small base image, a multi-stage build, and a non-root user.</li>
+    <li>Scan every image with Trivy, or with Syft and Grype. Fail the build on critical findings.</li>
+    <li>Generate the SBOM from the final image and keep it with the release.</li>
+    <li>Move to a private registry and pull base images through it. Deploy by digest.</li>
+    <li>Run kube-linter and kubesec on your manifests, then enforce the basics with an admission policy.</li>
+  </ol>
+
+  <h2>Next</h2>
+  <p>Something will still get through: a zero-day, a stolen credential, a policy mistake. Part 3 covers how to see it happen, with audit logs, cluster and application logging, and runtime detection inside containers.</p>
+  <p><a href="k8s-part-3-monitoring-runtime.html"><strong>Part 3: Monitoring, logging and runtime security →</strong></a></p>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://github.com/anchore/syft" target="_blank" rel="noopener">Syft</a> and <a href="https://github.com/anchore/grype" target="_blank" rel="noopener">Grype</a></li>
+    <li><a href="https://trivy.dev/" target="_blank" rel="noopener">Trivy</a></li>
+    <li><a href="https://github.com/stackrox/kube-linter" target="_blank" rel="noopener">kube-linter</a></li>
+    <li><a href="https://github.com/controlplaneio/kubesec" target="_blank" rel="noopener">kubesec</a></li>
+    <li><a href="https://cyclonedx.org/" target="_blank" rel="noopener">CycloneDX</a> and <a href="https://spdx.dev/" target="_blank" rel="noopener">SPDX</a> (SBOM formats)</li>
+    <li><a href="https://owasp.org/www-project-kubernetes-top-ten/" target="_blank" rel="noopener">OWASP Kubernetes Top Ten</a></li>
+  </ul>
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Tool commands and flags change between versions. Check each project's documentation before using them.
+    More notes: <a href="k8s-part-1-introduction.html">Kubernetes Part 1</a> · <a href="../web-security/jwt-security.html">JWT security</a>
+  </footer>
+</div>
+</body>
+</html>
