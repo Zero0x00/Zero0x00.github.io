@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JWT Security: Attacks and Server-Side Validation | Mohammad Arif</title>
+  <meta name="description" content="How JWT attacks work (alg, kid, jku, jwk, weak secrets, claim and authorization flaws) and how to prevent each one with server-side validation." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/web-security/jwt-security.html" />
+  <meta property="og:title" content="JWT Security: Attacks and Server-Side Validation" />
+  <meta property="og:description" content="How JWT attacks work and how to prevent each one on the server." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --good: #34d399; --bad: #fb7185; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    h4 { font-size: .8rem; margin: 1.3rem 0 .2rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box.bad { border-color: var(--bad); background: rgba(251,113,133,.09); }
+    .box.good { border-color: var(--good); background: rgba(52,211,153,.09); }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+    .num { color: var(--accent); font-family: var(--mono); font-size: .8em; margin-right: 8px; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a>
+
+  <header>
+    <div class="eyebrow">Web Security · Authentication</div>
+    <h1>JWT Security: Attacks and Server-Side Validation</h1>
+    <p class="sub">What goes wrong when an API trusts a JWT, shown attack by attack, with the server-side fix for each.</p>
+    <div class="byline">By Mohammad Arif · 12 min read</div>
+  </header>
+
+  <p>Most JWT vulnerabilities come from two root causes: the server lets the token decide how it gets verified, or the server treats a valid token as permission to do anything. The attacks below follow the order a request is processed: parse the header, pick a key, verify the signature, check the claims, authorize the action. After that come secure token storage, refresh token rotation, and the server-side validation steps that tie it together.</p>
+
+  <h2>1. Anatomy of a JWT</h2>
+  <p>A JWT is three Base64URL strings joined by dots: <code>header.payload.signature</code>.</p>
+<pre><code>eyJhbGciOiJSUzI1NiIsImtpZCI6ImtleS0yMDI2LTAyIiwidHlwIjoiSldUIn0
+.eyJpc3MiOiJodHRwczovL2xvZ2luLmV4YW1wbGUiLCJzdWIiOiJ1c2VyLTQyIiwiYXVkIjoib3JkZXJzLWFwaSIsInNjb3BlIjoib3JkZXJzOnJlYWQiLCJleHAiOjE5MDAwMDAwMDB9
+.&lt;signature bytes&gt;</code></pre>
+<pre><code>// header: tells the verifier how the token was signed
+{ "alg": "RS256", "kid": "key-2026-02", "typ": "JWT" }
+
+// payload: the claims
+{ "iss": "https://login.example",  // issuer
+  "sub": "user-42",                // subject (who)
+  "aud": "orders-api",             // audience (which API it is for)
+  "scope": "orders:read",
+  "exp": 1900000000 }              // expiry (unix time)</code></pre>
+  <div class="box">
+    <p><strong>Signed is not encrypted.</strong> Anyone holding the token can read it, so keep secrets out of the payload.</p>
+    <p><strong>Decoding is not verifying.</strong> Base64-decoding takes one line and proves nothing. Only a successful signature check makes the claims trustworthy.</p>
+  </div>
+  <p>The important point for everything below: <strong>the header is written by whoever sends the token.</strong> Every header field is attacker-controlled input.</p>
+
+  <h2>2. Where JWTs fit, and where they don't</h2>
+  <p>A session cookie is a random ID that the server looks up on every request. A JWT carries its claims and is checked with a signature, so no lookup is needed.</p>
+  <div class="tbl"><table>
+    <tr><th></th><th>Session cookie</th><th>JWT</th></tr>
+    <tr><td>Server state</td><td>Session store lookup per request</td><td>None, signature check only</td></tr>
+    <tr><td>Logout / revocation</td><td>Immediate</td><td>Valid until <code>exp</code> unless you add a denylist</td></tr>
+    <tr><td>Permission changes</td><td>Take effect on next request</td><td>Stale until the token expires</td></tr>
+    <tr><td>Fits</td><td>Browser apps, fast revocation</td><td>Multiple APIs validating one short-lived token</td></tr>
+  </table></div>
+  <p>A common design is a short-lived JWT access token (5 to 15 minutes) paired with a server-tracked refresh token. Verification stays fast, and you can still cut an account off.</p>
+
+  <h2>3. Attacks, in the order a request is processed</h2>
+
+  <h3><span class="num">3.1</span>alg: none (unsigned tokens)</h3>
+  <p><code>alg</code> names the signing algorithm. The spec defines <code>none</code> for tokens with no signature. Early libraries honored it, so an attacker could remove the signature and edit any claim.</p>
+<pre><code>// forged header, empty signature
+{ "alg": "none", "typ": "JWT" }
+{ "sub": "user-42", "role": "admin" }
+eyJhbGciOiJub25lIn0.eyJzdWIiOiJ1c2VyLTQyIiwicm9sZSI6ImFkbWluIn0.</code></pre>
+  <h4>Mitigation</h4>
+  <p>Pass an explicit algorithm allowlist to the verify call (<code>algorithms=["RS256"]</code>). Never derive the algorithm from the token. Reject any token with <code>none</code>, and some libraries also need case variants like <code>None</code> blocked.</p>
+
+  <h3><span class="num">3.2</span>Algorithm confusion (RS256 → HS256)</h3>
+  <p>RS256 verifies with a public key. HS256 verifies with a shared secret. If the server calls <code>verify(token, key)</code> and lets the header choose the algorithm, an attacker switches the header to HS256 and signs the token using the server's <em>public</em> key as the HMAC secret. The public key is, by design, public.</p>
+<pre><code># vulnerable: algorithm comes from the token
+jwt.decode(token, PUBLIC_KEY)
+
+# attacker side: sign HS256 with the public key bytes
+header  = {"alg": "HS256", "typ": "JWT"}
+forged  = hmac_sha256(key=PUBLIC_KEY_PEM, msg=b64(header) + "." + b64(payload))</code></pre>
+  <h4>Mitigation</h4>
+  <p>Use the same fixed allowlist, and bind each key to one algorithm. Modern libraries (jose, PyJWT 2.x) refuse to use a PEM public key as an HMAC secret, but older versions and custom code may not, so test for it.</p>
+
+  <h3><span class="num">3.3</span>Weak HMAC secret</h3>
+  <p>HS256 tokens are verified with a shared secret. If it is guessable (<code>secret</code>, <code>changeme</code>, the app name), the attacker takes one token they received legitimately and brute-forces the secret offline with hashcat (<code>-m 16500</code>). No requests reach your server during the attack. Once cracked, they can mint any token.</p>
+  <h4>Mitigation</h4>
+  <p>Generate at least 256 random bits, store it in a secrets manager, and rotate it. Where several services only need to verify, use RS256 or ES256 so that a leak of a verifying service cannot be used to issue tokens.</p>
+<pre><code>openssl rand -base64 48</code></pre>
+
+  <h3><span class="num">3.4</span>kid injection</h3>
+  <p><code>kid</code> (key ID) is a label that tells the verifier which key signed the token. It matters when an issuer rotates keys and publishes several at once. Example header: <code>{ "alg": "RS256", "kid": "key-2026-02" }</code>.</p>
+  <p>The flaw is in how the server uses it. If <code>kid</code> is placed into a SQL query or a file path, the attacker controls the lookup.</p>
+<pre><code># vulnerable: SQL injection through kid
+key = db.query(f"SELECT secret FROM keys WHERE id = '{header['kid']}'")
+
+# attacker header: the UNION returns a value they chose, then they sign HS256 with it
+{ "alg": "HS256", "kid": "x' UNION SELECT 'AAAA' -- " }
+
+# vulnerable: path traversal through kid
+key = open(f"/keys/{header['kid']}").read()
+
+# attacker header: points at a file with known content (empty), sign with empty secret
+{ "alg": "HS256", "kid": "../../../../dev/null" }</code></pre>
+  <h4>Mitigation</h4>
+  <p>Treat <code>kid</code> as a lookup key into a set you already trust, never as a query or path fragment.</p>
+<pre><code>KEYS = load_jwks_from_config()          # {"key-2026-02": &lt;public key&gt;, ...}
+key = KEYS.get(header.get("kid"))       # dict lookup, nothing is interpolated
+if key is None:
+    reject()</code></pre>
+
+  <h3><span class="num">3.5</span>jku: attacker-hosted key set</h3>
+  <p><code>jku</code> (JWK Set URL) is a header that points to a URL where the verifier can download the signing keys. The attacker sets it to their own server, hosts a key pair they generated, and signs the token with their private key. A server that follows the URL verifies a forged token successfully.</p>
+<pre><code>{ "alg": "RS256",
+  "kid": "attacker-key",
+  "jku": "https://evil.example/jwks.json" }   // attacker's JWKS, attacker's key</code></pre>
+  <p>The same field is an SSRF primitive: <code>"jku": "http://169.254.169.254/latest/meta-data/"</code> makes the server send a request to an internal address. Weak allowlists (substring checks, <code>https://login.example@evil.example</code>, open redirects on the trusted host) get bypassed.</p>
+  <h4>Mitigation</h4>
+  <p>Ignore <code>jku</code> entirely. Fetch keys from one JWKS URL taken from your own configuration (or the issuer's discovery document), cache it, and look keys up by <code>kid</code>. If you must honor a header URL, compare it to an exact-match allowlist after parsing, and block private IP ranges on the outbound fetch.</p>
+
+  <h3><span class="num">3.6</span>jwk: key embedded in the token</h3>
+  <p><code>jwk</code> carries the public key inside the header itself. The attacker generates a key pair, embeds the public half, signs with the private half, and the token verifies against the key it brought. This was the root of CVE-2018-0114 in the node-jose library.</p>
+<pre><code>{ "alg": "RS256",
+  "typ": "JWT",
+  "jwk": { "kty": "RSA", "e": "AQAB", "n": "&lt;attacker's public modulus&gt;" } }</code></pre>
+  <h4>Mitigation</h4>
+  <p>Never verify against a key supplied by the token. Related fields (<code>x5c</code>, <code>x5u</code>) have the same problem. Trusted keys come only from your issuer configuration.</p>
+
+  <h3><span class="num">3.7</span>Missing or loose claim validation</h3>
+  <p>A valid signature only says a trusted issuer signed these claims. It does not say they are meant for your API.</p>
+  <ul>
+    <li><strong>No <code>aud</code> check:</strong> a token issued for <code>billing-api</code> is accepted by <code>orders-api</code>. This enables cross-service token reuse.</li>
+    <li><strong>No <code>iss</code> check:</strong> a token from another tenant or environment (staging key, same format) is accepted.</li>
+    <li><strong>No <code>exp</code> check, or a very long lifetime:</strong> stolen tokens stay useful for days.</li>
+    <li><strong>Token type confusion:</strong> an ID token or refresh token accepted where an access token is required. Check <code>typ</code> (<code>at+jwt</code> for RFC 9068 access tokens).</li>
+  </ul>
+  <h4>Mitigation</h4>
+  <p>Require <code>iss</code>, <code>aud</code>, <code>exp</code> and <code>sub</code> to be present, match <code>iss</code> and <code>aud</code> exactly, and allow only a small clock-skew leeway.</p>
+
+  <h3><span class="num">3.8</span>Valid token, wrong permission (broken authorization)</h3>
+  <p>This is the most common real-world flaw because every earlier check can pass. A token with <code>scope: orders:write</code> says the caller may write orders in general. It does not say they may cancel order 42, which belongs to another customer. This is broken object level authorization (BOLA / IDOR), number one on the OWASP API Security Top 10.</p>
+  <div class="box bad"><p><strong>Fragile:</strong> "the token says <code>role=admin</code>, so allow it." Roles in a token are a snapshot from login time, and they say nothing about ownership of a specific record.</p></div>
+  <h4>Mitigation</h4>
+  <p>Use the token to learn <em>who</em> is calling. Then check the specific resource against current data on every request: tenant, ownership, state, and permission.</p>
+
+  <h3><span class="num">3.9</span>Token theft and long-lived tokens</h3>
+  <p>A bearer token works for whoever holds it. If it is stolen through XSS, a leaked log, a proxy, or a compromised device, the server cannot tell the thief from the user, and a JWT stays valid until <code>exp</code>. You cannot make theft impossible, so the design goal is to limit how long a stolen token is useful and to detect the theft. Sections 4 and 5 cover how.</p>
+
+  <h2>4. Storing tokens securely</h2>
+  <p>Where the client keeps the token decides who can steal it.</p>
+  <div class="tbl"><table>
+    <tr><th>Location</th><th>Exposed to</th><th>Verdict</th></tr>
+    <tr><td><code>localStorage</code> / <code>sessionStorage</code></td><td>Any JavaScript on the page: XSS, a compromised third-party script, a malicious browser extension</td><td>Avoid for anything long-lived</td></tr>
+    <tr><td>JavaScript memory (a variable)</td><td>XSS can still call your code, but nothing persists. The token is gone on refresh or tab close</td><td>Good for short-lived access tokens</td></tr>
+    <tr><td>HttpOnly cookie</td><td>Not readable by JavaScript. Sent automatically by the browser, so CSRF applies</td><td>Good for refresh tokens, with CSRF controls</td></tr>
+    <tr><td>URL / query string</td><td>Server logs, browser history, Referer header</td><td>Never</td></tr>
+  </table></div>
+  <h3>Recommended pattern for a browser app</h3>
+  <ul>
+    <li><strong>Access token:</strong> short-lived (5 to 15 minutes), held in memory, sent in the <code>Authorization: Bearer</code> header.</li>
+    <li><strong>Refresh token:</strong> in an HttpOnly cookie scoped to the refresh endpoint only, so it is not sent with every request.</li>
+  </ul>
+<pre><code>Set-Cookie: refresh_token=&lt;opaque random value&gt;;
+            HttpOnly; Secure; SameSite=Strict;
+            Path=/auth/refresh; Max-Age=1209600</code></pre>
+  <ul>
+    <li><code>HttpOnly</code>: JavaScript cannot read it.</li>
+    <li><code>Secure</code>: sent over HTTPS only.</li>
+    <li><code>SameSite=Strict</code> (or <code>Lax</code>): the browser withholds it on cross-site requests, which blocks most CSRF. Add a CSRF token or an <code>Origin</code> header check on the refresh endpoint as a second layer.</li>
+    <li><code>Path=/auth/refresh</code>: limits where the cookie is sent.</li>
+  </ul>
+  <div class="box bad"><p><strong>No storage option stops XSS.</strong> If an attacker can run script on your page, they can call your API as the user without ever reading the token. HttpOnly protects the token's <em>value</em>, not the session. A strict Content-Security-Policy, output encoding and avoiding <code>innerHTML</code> are still required.</p></div>
+  <h3>Other clients</h3>
+  <ul>
+    <li><strong>Mobile:</strong> iOS Keychain or Android Keystore, never plain preferences or app files.</li>
+    <li><strong>Server-to-server:</strong> secrets manager or environment injection. Never commit tokens or signing keys to source control.</li>
+    <li><strong>Signing keys:</strong> kept in a KMS or HSM where possible, so the key material is never on application disks.</li>
+  </ul>
+
+  <h2>5. Refresh token rotation</h2>
+  <p>Short-lived access tokens are only practical if the client can get new ones without logging in again. That is the job of a <strong>refresh token</strong>: a long-lived credential used only at the token endpoint. Because it lives longer, it is the more valuable target. <strong>Refresh token rotation</strong> reduces that risk.</p>
+  <h3>How it works</h3>
+  <ol>
+    <li>On login, the server issues an access token (JWT, 10 minutes) and a refresh token (opaque random string, not a JWT) and starts a <strong>token family</strong>: a record that ties every refresh token descended from this login together.</li>
+    <li>When the access token expires, the client sends the refresh token to <code>/auth/refresh</code>.</li>
+    <li>The server checks it, then returns a <strong>new access token and a new refresh token</strong>. The old refresh token is marked used and can never be accepted again.</li>
+    <li>The chain continues: login → R1 → R2 → R3 → … All belong to one family.</li>
+  </ol>
+<pre><code>Family F1:   R1 ──used──▶ R2 ──used──▶ R3 (current)
+                │
+                └─ if R1 shows up again after R2 was issued → reuse detected</code></pre>
+  <h3>Reuse detection</h3>
+  <p>Suppose an attacker steals R1 while the real user also holds it. Whoever refreshes first gets R2, and R1 becomes used. Then the other party presents R1.</p>
+  <ul>
+    <li>Attacker refreshes first: the real user's next refresh sends the already-used R1. The server sees a used token replayed.</li>
+    <li>User refreshes first: the attacker's stolen R1 is rejected.</li>
+  </ul>
+  <p>In both cases, a used refresh token appearing again means two parties hold the same chain, so the server <strong>revokes the entire family</strong>. The attacker's current token dies, the user is forced to log in again, and the event is logged as a likely theft.</p>
+  <h3>Why this method is useful</h3>
+  <ul>
+    <li><strong>Limits the damage window.</strong> A stolen access token expires in minutes. A stolen refresh token works once, and only until the next legitimate refresh.</li>
+    <li><strong>Detects theft.</strong> A static long-lived token gives no signal when it is copied. Rotation turns replay into an alarm.</li>
+    <li><strong>Gives real revocation.</strong> The server holds state for refresh tokens, so logout, password change, and account disable can kill a whole family immediately, while access-token verification stays stateless.</li>
+    <li><strong>Keeps the fast path fast.</strong> API calls only check a signature. The database is touched only at refresh time.</li>
+  </ul>
+  <h3>Implementation notes</h3>
+  <ul>
+    <li>Store only a <strong>hash</strong> of each refresh token (SHA-256 is fine for high-entropy random values), with its family ID, status, and expiry. A database leak then does not expose usable tokens.</li>
+    <li>Use at least 256 bits of randomness from a CSPRNG.</li>
+    <li>Set an <strong>idle timeout</strong> and an <strong>absolute lifetime</strong> for the family (for example 30 days), so a chain cannot be extended forever.</li>
+    <li>Make the "check, mark used, issue next" step atomic (a single transaction or conditional update). Otherwise two simultaneous requests can both succeed.</li>
+    <li>Multiple tabs or a retry after a network drop can look like reuse. A short grace window (a few seconds) for the immediately previous token avoids logging out honest users, at the cost of a small replay window.</li>
+    <li>Bind the family to the client where possible (client ID, and device or IP signals for risk scoring).</li>
+    <li>This is what OAuth 2.0 Security Best Current Practice recommends for public clients, and what major identity providers implement as "refresh token rotation".</li>
+  </ul>
+
+  <h2>6. Server-side validation, step by step</h2>
+  <p>Every API request that carries an access token goes through the same checks, in this order. Each step closes one of the attacks in section 3.</p>
+  <ol>
+    <li><strong>Bound the input.</strong> Require <code>Authorization: Bearer</code>, cap the token size, and reject tokens in query strings. (3.9)</li>
+    <li><strong>Select the key from configuration.</strong> Use the JWKS URL from your own settings or the issuer's discovery document, cache it, and pick the key by <code>kid</code> with a plain lookup. Ignore <code>jku</code>, <code>jwk</code>, <code>x5u</code> and <code>x5c</code>. (3.4 to 3.6)</li>
+    <li><strong>Verify the signature with a fixed algorithm.</strong> The allowlist lives in server code. Reject <code>none</code> and any algorithm that does not match the key. (3.1 to 3.3)</li>
+    <li><strong>Validate the claims.</strong> Exact match on <code>iss</code> and <code>aud</code>, require <code>exp</code> (and <code>sub</code>), apply a small clock-skew leeway, and check the token type. (3.7)</li>
+    <li><strong>Authorize the action.</strong> Load the resource and check tenant, ownership, state and permission, using current data rather than only the token's roles. Return 404 for objects the caller should not know exist. (3.8)</li>
+    <li><strong>Fail closed and quietly.</strong> Any failure returns the same generic 401 or 403, with details in server logs only (never the token itself).</li>
+  </ol>
+  <p>Use a maintained JOSE library for steps 2 to 4 rather than parsing tokens by hand. Most of the bugs in section 3 come from custom JWT handling.</p>
+
+  <h2>7. Quick reference</h2>
+  <div class="tbl"><table>
+    <tr><th>Field / flaw</th><th>What the attacker does</th><th>Server-side fix</th></tr>
+    <tr><td><code>alg: none</code></td><td>Removes the signature</td><td>Fixed algorithm allowlist</td></tr>
+    <tr><td>alg confusion</td><td>RS256 → HS256, signs with public key</td><td>Allowlist, key bound to one algorithm</td></tr>
+    <tr><td>Weak secret</td><td>Cracks HS256 offline</td><td>256-bit random secret or asymmetric keys</td></tr>
+    <tr><td><code>kid</code></td><td>SQLi / path traversal in key lookup</td><td>Dictionary lookup in a trusted key set</td></tr>
+    <tr><td><code>jku</code> / <code>x5u</code></td><td>Hosts own keys, or triggers SSRF</td><td>Ignore, use configured JWKS URL only</td></tr>
+    <tr><td><code>jwk</code> / <code>x5c</code></td><td>Embeds own public key</td><td>Never verify with a token-supplied key</td></tr>
+    <tr><td>Claims</td><td>Replays token meant for another API</td><td>Exact <code>iss</code>, <code>aud</code>, require <code>exp</code></td></tr>
+    <tr><td>Authorization</td><td>Uses valid token on another user's object</td><td>Per-resource check on every request</td></tr>
+    <tr><td>Token theft</td><td>Reuses a stolen access or refresh token</td><td>Short expiry, secure storage, refresh rotation with reuse detection</td></tr>
+  </table></div>
+
+  <h2>8. Testing it</h2>
+  <p>For a code review or pentest, these checks cover the list above:</p>
+  <ul>
+    <li>Send the token with <code>alg: none</code> and with the signature removed. Both must return 401.</li>
+    <li>Switch RS256 to HS256 and sign with the public key (Burp's JWT Editor extension or <code>jwt_tool -X k</code>).</li>
+    <li>Crack the secret of any HS256 token with hashcat and a wordlist.</li>
+    <li>Fuzz <code>kid</code> with quotes, <code>../</code> and null bytes. Add <code>jku</code> and <code>jwk</code> headers pointing at a server you control and watch for inbound requests.</li>
+    <li>Replay a token against a different API or environment, and send one with an expired <code>exp</code>.</li>
+    <li>With a valid low-privilege token, request another user's resource IDs.</li>
+    <li>Use a refresh token twice. The second use must fail and the whole family must be revoked.</li>
+    <li>Check where tokens live: browser storage, cookie flags, URLs, logs, and error messages.</li>
+  </ul>
+
+  <h2>9. Pre-ship checklist</h2>
+  <ul class="check">
+    <li>Algorithm allowlist is set in code, and <code>none</code> is rejected.</li>
+    <li>Keys come from configuration, selected by <code>kid</code> lookup only. <code>jku</code>, <code>jwk</code>, <code>x5u</code>, <code>x5c</code> are ignored.</li>
+    <li>HMAC secrets are 256+ random bits, or the system uses asymmetric signing.</li>
+    <li><code>iss</code> and <code>aud</code> match exactly. <code>exp</code> is required and lifetimes are short.</li>
+    <li>Every endpoint checks permission on the specific resource.</li>
+    <li>Access tokens expire in minutes. Refresh tokens are opaque, stored hashed, rotated on every use, with reuse detection and an absolute lifetime.</li>
+    <li>Key rotation and compromise response are defined and tested.</li>
+    <li>Tokens are absent from URLs and logs. Access token in memory, refresh token in an HttpOnly, Secure, SameSite cookie with CSRF controls.</li>
+  </ul>
+
+  <div class="box">
+    <p><strong>Summary:</strong> verify the token with settings the server owns, then authorize the action against current data for the specific resource.</p>
+  </div>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc7519" target="_blank" rel="noopener">RFC 7519: JSON Web Token</a></li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc7515" target="_blank" rel="noopener">RFC 7515: JSON Web Signature (defines alg, kid, jku, jwk, x5u, x5c)</a></li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc8725" target="_blank" rel="noopener">RFC 8725: JWT Best Current Practices</a></li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc9068" target="_blank" rel="noopener">RFC 9068: JWT Profile for OAuth 2.0 Access Tokens</a></li>
+    <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP JWT Cheat Sheet</a></li>
+    <li><a href="https://portswigger.net/web-security/jwt" target="_blank" rel="noopener">PortSwigger Web Security Academy: JWT attacks</a></li>
+  </ul>
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Examples are illustrative. Follow your framework's and identity provider's guidance.
+    More notes: <a href="PKCE.html">PKCE</a> · <a href="OAuth-threat_model.html">OAuth threat model</a>
+  </footer>
+</div>
+</body>
+</html>
