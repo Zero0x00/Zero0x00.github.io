@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kubernetes Series, Part 3: Monitoring, Logging and Runtime Security | Mohammad Arif</title>
+  <meta name="description" content="Part 3 of a Kubernetes security series: what to log and watch, how to detect attacks inside running containers with Falco, and what to do when a Pod is compromised." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/kubernetes/k8s-part-3-monitoring-runtime.html" />
+  <meta property="og:title" content="Kubernetes Series, Part 3: Monitoring, Logging and Runtime Security" />
+  <meta property="og:description" content="Audit logs, cluster logging and runtime detection: see an attack while it happens." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a>
+
+  <header>
+    <div class="eyebrow">Kubernetes Security Series · Part 3 of 3</div>
+    <h1>Monitoring, Logging and Runtime Security</h1>
+    <p class="sub">Prevention will fail sometimes. This part is about seeing the attack while it happens, and knowing what to do next.</p>
+    <div class="byline">By Mohammad Arif · 9 min read · <a href="k8s-part-1-introduction.html">Part 1</a> · <a href="k8s-part-2-supply-chain.html">Part 2</a></div>
+  </header>
+
+  <p>Part 1 explained how the cluster works. Part 2 reduced the chance of running something bad. But a new vulnerability, a stolen credential or a policy mistake can still let an attacker in. If you have no logs and no detection, you will not know until the damage is done, and you will have nothing to investigate with. Many breaches go unnoticed for weeks for exactly this reason.</p>
+
+  <h2>1. Four places to watch</h2>
+  <p>Each layer of a cluster can show you something different. An attacker usually touches more than one.</p>
+
+  <figure><svg viewBox="0 0 760 290" role="img" aria-label="Four sources of security data (control plane, node, containers, network) feeding one central log store and alerts"><defs><marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="21" y="18" class="t-h">WHERE THE DATA COMES FROM</text><rect class="n" x="21" y="30" width="166" height="100" rx="10"/><text x="104.0" y="56" text-anchor="middle" class="t-b">Control plane</text><text x="104.0" y="80" text-anchor="middle" class="t-s">Audit logs</text><text x="104.0" y="98" text-anchor="middle" class="t-s">who did what</text><text x="104.0" y="116" text-anchor="middle" class="t-s">through the API</text><path class="ln" d="M104.0 130V168" marker-end="url(#c1)"/><rect class="n" x="205" y="30" width="166" height="100" rx="10"/><text x="288.0" y="56" text-anchor="middle" class="t-b">Node</text><text x="288.0" y="80" text-anchor="middle" class="t-s">OS + kubelet logs</text><text x="288.0" y="98" text-anchor="middle" class="t-s">logins, kernel</text><text x="288.0" y="116" text-anchor="middle" class="t-s">events</text><path class="ln" d="M288.0 130V168" marker-end="url(#c1)"/><rect class="n" x="389" y="30" width="166" height="100" rx="10"/><text x="472.0" y="56" text-anchor="middle" class="t-b">Containers</text><text x="472.0" y="80" text-anchor="middle" class="t-s">App logs + runtime</text><text x="472.0" y="98" text-anchor="middle" class="t-s">events: stdout,</text><text x="472.0" y="116" text-anchor="middle" class="t-s">Falco / Tetragon</text><path class="ln" d="M472.0 130V168" marker-end="url(#c1)"/><rect class="n" x="573" y="30" width="166" height="100" rx="10"/><text x="656.0" y="56" text-anchor="middle" class="t-b">Network</text><text x="656.0" y="80" text-anchor="middle" class="t-s">Flow logs</text><text x="656.0" y="98" text-anchor="middle" class="t-s">who talks to</text><text x="656.0" y="116" text-anchor="middle" class="t-s">whom</text><path class="ln" d="M656.0 130V168" marker-end="url(#c1)"/><rect class="hl" x="21" y="168" width="718" height="52" rx="10"/><text x="380" y="191" text-anchor="middle" class="t-b">Central log store</text><text x="380" y="209" text-anchor="middle" class="t-s">Loki, OpenSearch, or your cloud logging. Searchable, kept off the node.</text><path class="ln" d="M380 220V246" marker-end="url(#c1)"/><rect class="ok" x="240" y="246" width="280" height="36" rx="10"/><text x="380" y="269" text-anchor="middle" class="t-b">Alerts to people</text></svg><figcaption>Figure 1. Send data from every layer to one place that attackers cannot easily erase, and alert from there.</figcaption></figure>
+
+  <div class="tbl"><table>
+    <tr><th>Layer</th><th>What it tells you</th></tr>
+    <tr><td><strong>Control plane (audit logs)</strong></td><td>Every request to the API server: who did it, what they did, and whether it was allowed.</td></tr>
+    <tr><td><strong>Node</strong></td><td>Logins to the node, kubelet activity, kernel messages.</td></tr>
+    <tr><td><strong>Containers</strong></td><td>Application logs, and what the container is actually doing: processes started, files opened, network connections.</td></tr>
+    <tr><td><strong>Network</strong></td><td>Which Pods and external addresses are talking to each other.</td></tr>
+  </table></div>
+
+  <h2>2. Kubernetes audit logs</h2>
+  <p>The API server sees every change and every read of the cluster, so its audit log is the most useful single source. It records the user or ServiceAccount, the action, the resource, the time, the source IP, and the result. You choose how much detail to keep with an audit policy.</p>
+<pre><code>apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+# Secrets: log who touched them, never the contents
+- level: Metadata
+  resources:
+  - group: ""
+    resources: ["secrets", "configmaps"]
+# Someone running a command inside a Pod: keep full detail
+- level: RequestResponse
+  resources:
+  - group: ""
+    resources: ["pods/exec", "pods/attach"]
+# Permission changes: keep full detail
+- level: RequestResponse
+  resources:
+  - group: "rbac.authorization.k8s.io"
+# Everything else: who, what, when
+- level: Metadata</code></pre>
+  <p>Rules are checked in order and the first match wins, so the general rule goes last. Do not log Secrets at <code>Request</code> or <code>RequestResponse</code> level, because the secret values would then be written into the log.</p>
+  <p>On a managed service, you turn this on instead of writing the policy file: EKS control plane logging, GKE audit logs, or AKS diagnostic settings. Check that it is actually enabled, because it is often off by default.</p>
+  <h3>What to alert on</h3>
+  <ul>
+    <li><code>pods/exec</code> or <code>pods/attach</code>: someone ran a command inside a Pod. Normal for an admin, suspicious from a ServiceAccount.</li>
+    <li>A new Pod with <code>privileged: true</code>, <code>hostPath</code>, <code>hostNetwork</code> or <code>hostPID</code>.</li>
+    <li>A new RoleBinding or ClusterRoleBinding, especially to <code>cluster-admin</code>.</li>
+    <li><code>get</code> or <code>list</code> on Secrets by a user or ServiceAccount that does not normally do that.</li>
+    <li>Requests from <code>system:anonymous</code>, or many <code>403 Forbidden</code> results in a short time (someone is probing what they can do).</li>
+    <li>Changes in <code>kube-system</code>.</li>
+  </ul>
+
+  <h2>3. Cluster logging</h2>
+  <p>Kubernetes does not keep container logs for you. <code>kubectl logs</code> reads a file on the node, and that file disappears when the Pod is deleted or the node is replaced. An attacker who wants to hide will do exactly that. So logs must be copied off the node quickly.</p>
+  <ul>
+    <li>Run a log agent on every node (Fluent Bit, Vector, or similar) as a DaemonSet. It reads container output and sends it to a central store.</li>
+    <li>Use a central store that you can search and alert on: Loki, OpenSearch or Elasticsearch, or your cloud's logging service.</li>
+    <li>Collect audit logs, node logs and application logs in the same place, so you can follow one event across layers.</li>
+    <li>Keep logs long enough to investigate. Attacks are often found weeks later. Make the log store write-only for the workloads that produce logs, so a compromised Pod cannot erase its own tracks.</li>
+    <li>Keep clocks in sync (NTP), or you cannot put events in order.</li>
+  </ul>
+  <h3>Application logs</h3>
+  <p>Have your apps log logins, failed logins, permission denials and other important actions in a structured format such as JSON. Never log passwords, API keys or tokens. If a JWT or session token ends up in a log, anyone who can read the logs can use it (see my <a href="../web-security/jwt-security.html">JWT security</a> post).</p>
+  <h3>Metrics</h3>
+  <p>Prometheus and Grafana are mostly for reliability, but they also catch attacks. A sudden CPU spike in a Pod that is normally idle can be cryptomining. Unexpected restarts, new Pods in system namespaces, and a jump in outbound traffic are all worth an alert.</p>
+  <h3>Network</h3>
+  <p>Start with NetworkPolicies that deny traffic by default and allow only what each app needs, including limits on outbound (egress) traffic. Then collect flow logs (cloud VPC flow logs, or Cilium Hubble) so you can see who talked to whom. Outbound connections to unknown addresses are a common sign of data theft or a command-and-control channel.</p>
+
+  <h2>4. Runtime security</h2>
+  <p>Logs tell you what the API server and the apps recorded. They do not tell you what is happening <em>inside</em> a container. Runtime security tools watch the kernel for that: which processes start, which files are opened, which connections are made. They compare it against rules for suspicious behavior and raise an alert.</p>
+  <div class="tbl"><table>
+    <tr><th>Tool</th><th>What it is</th></tr>
+    <tr><td><strong>Falco</strong></td><td>The most widely used open-source runtime detection tool (a CNCF project). Runs on each node and ships with a default set of rules. You write your own in YAML.</td></tr>
+    <tr><td><strong>Tetragon</strong></td><td>eBPF-based, from the Cilium project. Can detect, and also block, behavior in the kernel.</td></tr>
+    <tr><td><strong>Tracee</strong></td><td>eBPF-based detection from Aqua Security.</td></tr>
+  </table></div>
+  <p>Typical things these tools catch:</p>
+  <ul>
+    <li>A shell started inside a container that should only run one program.</li>
+    <li>A process reading <code>/etc/shadow</code> or the ServiceAccount token file.</li>
+    <li>A package manager or download tool run inside a running container.</li>
+    <li>Writes to system directories such as <code>/bin</code> or <code>/etc</code>.</li>
+    <li>A container using the host's namespaces, or mounting sensitive host paths.</li>
+    <li>Outbound connections to places the container has never contacted before.</li>
+  </ul>
+  <p>A simple Falco rule looks like this. Falco's default rules already include something similar, so treat this as an illustration:</p>
+<pre><code>- rule: Shell in container
+  desc: A shell was started inside a container
+  condition: spawned_process and container and proc.name in (bash, sh, zsh)
+  output: Shell started in container (user=%user.name container=%container.name image=%container.image.repository command=%proc.cmdline)
+  priority: WARNING</code></pre>
+  <p>This is why Part 2 pushed for small images. A distroless image has no shell at all, so an attacker has fewer tools to use, and any shell that does appear stands out.</p>
+  <p><strong>Expect noise.</strong> Out of the box, runtime tools will alert on normal behavior in your apps. Run them in a quiet mode first, tune the rules for your workloads, and then send only the important alerts to people. An alert channel that everyone ignores is worse than none.</p>
+
+  <h3>Limit what an attacker can do, too</h3>
+  <p>Detection works better when the container is already locked down. These settings in the Pod spec remove most of what attackers rely on:</p>
+<pre><code>securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault</code></pre>
+  <p>Kubernetes can enforce these across a namespace with Pod Security Admission, using the <code>restricted</code> level. Also turn off the automatic ServiceAccount token for Pods that do not call the API (<code>automountServiceAccountToken: false</code>).</p>
+
+  <h2>5. Seeing the whole attack</h2>
+  <p>Remember the attack chain from Part 1. Figure 2 shows where each step leaves a trace. No single source catches all of it, which is why you need several.</p>
+
+  <figure><svg viewBox="0 0 760 250" role="img" aria-label="Five attack steps and the log or runtime signal that reveals each one"><defs><marker id="c2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><text x="21" y="18" class="t-h" style="fill:#fb7185">THE ATTACK</text><rect class="risk" x="21" y="28" width="134" height="76" rx="10"/><text x="88.0" y="52" text-anchor="middle" class="t-b">App exploited</text><text x="88.0" y="72" text-anchor="middle" class="t-s">attacker runs a</text><text x="88.0" y="89" text-anchor="middle" class="t-s">shell in the Pod</text><path class="ln" d="M155 66H167" marker-end="url(#c2)"/><rect class="risk" x="167" y="28" width="134" height="76" rx="10"/><text x="234.0" y="52" text-anchor="middle" class="t-b">Token stolen</text><text x="234.0" y="72" text-anchor="middle" class="t-s">reads the mounted</text><text x="234.0" y="89" text-anchor="middle" class="t-s">ServiceAccount token</text><path class="ln" d="M301 66H313" marker-end="url(#c2)"/><rect class="risk" x="313" y="28" width="134" height="76" rx="10"/><text x="380.0" y="52" text-anchor="middle" class="t-b">Privileged Pod</text><text x="380.0" y="72" text-anchor="middle" class="t-s">uses the token to</text><text x="380.0" y="89" text-anchor="middle" class="t-s">create a new Pod</text><path class="ln" d="M447 66H459" marker-end="url(#c2)"/><rect class="risk" x="459" y="28" width="134" height="76" rx="10"/><text x="526.0" y="52" text-anchor="middle" class="t-b">Escape to node</text><text x="526.0" y="72" text-anchor="middle" class="t-s">breaks out of</text><text x="526.0" y="89" text-anchor="middle" class="t-s">the container</text><path class="ln" d="M593 66H605" marker-end="url(#c2)"/><rect class="risk" x="605" y="28" width="134" height="76" rx="10"/><text x="672.0" y="52" text-anchor="middle" class="t-b">Secrets reached</text><text x="672.0" y="72" text-anchor="middle" class="t-s">lists Secrets,</text><text x="672.0" y="89" text-anchor="middle" class="t-s">moves sideways</text><text x="21" y="134" class="t-h" style="fill:#34d399">WHAT YOU WOULD SEE</text><rect class="ok" x="21" y="144" width="134" height="76" rx="10"/><text x="88.0" y="168" text-anchor="middle" class="t-s">Runtime: shell</text><text x="88.0" y="185" text-anchor="middle" class="t-s">started in a</text><text x="88.0" y="202" text-anchor="middle" class="t-s">container</text><rect class="ok" x="167" y="144" width="134" height="76" rx="10"/><text x="234.0" y="168" text-anchor="middle" class="t-s">Runtime: token</text><text x="234.0" y="185" text-anchor="middle" class="t-s">file read by a</text><text x="234.0" y="202" text-anchor="middle" class="t-s">new process</text><rect class="ok" x="313" y="144" width="134" height="76" rx="10"/><text x="380.0" y="168" text-anchor="middle" class="t-s">Audit log: Pod</text><text x="380.0" y="185" text-anchor="middle" class="t-s">created with</text><text x="380.0" y="202" text-anchor="middle" class="t-s">privileged: true</text><rect class="ok" x="459" y="144" width="134" height="76" rx="10"/><text x="526.0" y="168" text-anchor="middle" class="t-s">Runtime: host</text><text x="526.0" y="185" text-anchor="middle" class="t-s">files or namespaces</text><text x="526.0" y="202" text-anchor="middle" class="t-s">touched</text><rect class="ok" x="605" y="144" width="134" height="76" rx="10"/><text x="672.0" y="168" text-anchor="middle" class="t-s">Audit log: Secrets</text><text x="672.0" y="185" text-anchor="middle" class="t-s">list. Flow logs:</text><text x="672.0" y="202" text-anchor="middle" class="t-s">new connections</text></svg><figcaption>Figure 2. The attack chain from Part 1, and the log or runtime signal that exposes each step. Catching any one step lets you stop the rest.</figcaption></figure>
+
+  <h2>6. When an alert fires</h2>
+  <p>Say a Pod is showing a shell and a read of the token file. Do not just delete it. Deleting destroys the evidence and the attacker may already have moved on. A calmer order:</p>
+  <ol>
+    <li><strong>Confirm.</strong> Check the audit logs and runtime events. Is this a real attack, or an admin debugging?</li>
+    <li><strong>Contain.</strong> Cut it off without deleting it. Apply a NetworkPolicy that blocks the Pod's traffic, or remove its label so Services stop sending it traffic. If it may have escaped, cordon the node so nothing new is scheduled there.</li>
+    <li><strong>Collect.</strong> Save the Pod's logs, its spec, and if you can, a copy of its filesystem or memory, before anything is removed. Make sure the central logs from the time window are kept.</li>
+    <li><strong>Find the reach.</strong> Use the audit log to see what that Pod's ServiceAccount did. What could it read? Which Secrets did it touch?</li>
+    <li><strong>Rotate.</strong> Replace every credential the Pod could access: ServiceAccount tokens, Secrets, database passwords, API keys.</li>
+    <li><strong>Recover and fix.</strong> Redeploy from a known-good image, patch the entry point, and add a detection or policy so this exact path is caught earlier next time.</li>
+  </ol>
+  <p>Write this down and practice it once before you need it. During an incident, nobody wants to learn what the audit log looks like for the first time.</p>
+
+  <h2>Where to start</h2>
+  <ol>
+    <li>Turn on API audit logs and send them somewhere you can search. Add the alerts from section 2.</li>
+    <li>Ship container and node logs off the node with a DaemonSet agent.</li>
+    <li>Add default-deny NetworkPolicies and apply the <code>restricted</code> Pod security level.</li>
+    <li>Install Falco (or Tetragon), tune it, then alert on the few rules that matter.</li>
+    <li>Write and test an incident checklist.</li>
+  </ol>
+
+  <h2>The series in one page</h2>
+  <ul>
+    <li><a href="k8s-part-1-introduction.html"><strong>Part 1:</strong> how Kubernetes works</a>, and why each part is a target.</li>
+    <li><a href="k8s-part-2-supply-chain.html"><strong>Part 2:</strong> supply chain security</a>, so what you run is what you meant to run.</li>
+    <li><strong>Part 3:</strong> detect and respond, for when something gets through anyway.</li>
+  </ul>
+  <p>The three work together: prevent where you can, detect what you cannot prevent, and be ready to respond.</p>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/" target="_blank" rel="noopener">Kubernetes docs: Auditing</a></li>
+    <li><a href="https://kubernetes.io/docs/concepts/security/pod-security-standards/" target="_blank" rel="noopener">Pod Security Standards</a></li>
+    <li><a href="https://falco.org/docs/" target="_blank" rel="noopener">Falco documentation</a></li>
+    <li><a href="https://tetragon.io/docs/" target="_blank" rel="noopener">Tetragon documentation</a></li>
+    <li><a href="https://fluentbit.io/" target="_blank" rel="noopener">Fluent Bit</a> and <a href="https://grafana.com/oss/loki/" target="_blank" rel="noopener">Loki</a></li>
+    <li><a href="https://owasp.org/www-project-kubernetes-top-ten/" target="_blank" rel="noopener">OWASP Kubernetes Top Ten</a></li>
+  </ul>
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Tool names, flags and defaults change between versions. Check each project's documentation before using them.
+    More notes: <a href="k8s-part-2-supply-chain.html">Kubernetes Part 2</a> · <a href="../web-security/jwt-security.html">JWT security</a>
+  </footer>
+</div>
+</body>
+</html>
