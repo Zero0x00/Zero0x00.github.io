@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OWASP Kubernetes Top 10 (2025): A Practical Guide | Mohammad Arif</title>
+  <meta name="description" content="The OWASP Kubernetes Top 10 (2025) explained simply: what each risk is, a command to check for it, and how to fix it." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/kubernetes/owasp-k8s-top-10.html" />
+  <meta property="og:title" content="OWASP Kubernetes Top 10 (2025): A Practical Guide" />
+  <meta property="og:description" content="Each OWASP Kubernetes Top 10 risk with a quick check and a fix." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a>
+
+  <header>
+    <div class="eyebrow">Kubernetes Security · OWASP Top 10</div>
+    <h1>OWASP Kubernetes Top 10 (2025): A Practical Guide</h1>
+    <p class="sub">What each risk means, a command to check your own cluster for it, and how to fix it.</p>
+    <div class="byline">By Mohammad Arif · 10 min read</div>
+  </header>
+
+  <p>The OWASP Kubernetes Top 10 lists the most common ways clusters get compromised. This post goes through the 2025 edition one risk at a time. Each one has the same layout: what it is, how to check for it, and how to fix it. Where a risk is covered in depth in my <a href="k8s-part-1-introduction.html">Kubernetes series</a>, I link to it.</p>
+
+  <figure><svg viewBox="0 0 760 232" role="img" aria-label="The ten OWASP Kubernetes risks for 2025, grouped by area"><rect class="hl" x="21" y="14" width="134" height="96" rx="10"/><text x="88.0" y="38" text-anchor="middle" class="t-h">K01</text><text x="88.0" y="60" text-anchor="middle" class="t-b" style="font-size:12px">Insecure workload</text><text x="88.0" y="77" text-anchor="middle" class="t-b" style="font-size:12px">configuration</text><text x="88.0" y="100" text-anchor="middle" class="t-s" style="fill:#9ca3af">Workloads</text><rect class="pod" x="167" y="14" width="134" height="96" rx="10"/><text x="234.0" y="38" text-anchor="middle" class="t-h">K02</text><text x="234.0" y="60" text-anchor="middle" class="t-b" style="font-size:12px">Over-permissive</text><text x="234.0" y="77" text-anchor="middle" class="t-b" style="font-size:12px">authorization</text><text x="234.0" y="100" text-anchor="middle" class="t-s" style="fill:#9ca3af">Access</text><rect class="hl" x="313" y="14" width="134" height="96" rx="10"/><text x="380.0" y="38" text-anchor="middle" class="t-h">K03</text><text x="380.0" y="60" text-anchor="middle" class="t-b" style="font-size:12px">Secrets</text><text x="380.0" y="77" text-anchor="middle" class="t-b" style="font-size:12px">mismanagement</text><text x="380.0" y="100" text-anchor="middle" class="t-s" style="fill:#9ca3af">Workloads</text><rect class="n" x="459" y="14" width="134" height="96" rx="10"/><text x="526.0" y="38" text-anchor="middle" class="t-h">K04</text><text x="526.0" y="60" text-anchor="middle" class="t-b" style="font-size:12px">No cluster-level</text><text x="526.0" y="77" text-anchor="middle" class="t-b" style="font-size:12px">policy</text><text x="526.0" y="100" text-anchor="middle" class="t-s" style="fill:#9ca3af">Policy</text><rect class="ok" x="605" y="14" width="134" height="96" rx="10"/><text x="672.0" y="38" text-anchor="middle" class="t-h">K05</text><text x="672.0" y="60" text-anchor="middle" class="t-b" style="font-size:12px">No network</text><text x="672.0" y="77" text-anchor="middle" class="t-b" style="font-size:12px">segmentation</text><text x="672.0" y="100" text-anchor="middle" class="t-s" style="fill:#9ca3af">Network</text><rect class="ok" x="21" y="122" width="134" height="96" rx="10"/><text x="88.0" y="146" text-anchor="middle" class="t-h">K06</text><text x="88.0" y="168" text-anchor="middle" class="t-b" style="font-size:12px">Overly exposed</text><text x="88.0" y="185" text-anchor="middle" class="t-b" style="font-size:12px">components</text><text x="88.0" y="208" text-anchor="middle" class="t-s" style="fill:#9ca3af">Network</text><rect class="n" x="167" y="122" width="134" height="96" rx="10"/><text x="234.0" y="146" text-anchor="middle" class="t-h">K07</text><text x="234.0" y="168" text-anchor="middle" class="t-b" style="font-size:12px">Misconfigured or</text><text x="234.0" y="185" text-anchor="middle" class="t-b" style="font-size:12px">vulnerable parts</text><text x="234.0" y="208" text-anchor="middle" class="t-s" style="fill:#9ca3af">Platform</text><rect class="risk" x="313" y="122" width="134" height="96" rx="10"/><text x="380.0" y="146" text-anchor="middle" class="t-h">K08</text><text x="380.0" y="168" text-anchor="middle" class="t-b" style="font-size:12px">Cluster-to-cloud</text><text x="380.0" y="185" text-anchor="middle" class="t-b" style="font-size:12px">lateral movement</text><text x="380.0" y="208" text-anchor="middle" class="t-s" style="fill:#9ca3af">Cloud</text><rect class="pod" x="459" y="122" width="134" height="96" rx="10"/><text x="526.0" y="146" text-anchor="middle" class="t-h">K09</text><text x="526.0" y="168" text-anchor="middle" class="t-b" style="font-size:12px">Broken</text><text x="526.0" y="185" text-anchor="middle" class="t-b" style="font-size:12px">authentication</text><text x="526.0" y="208" text-anchor="middle" class="t-s" style="fill:#9ca3af">Access</text><rect class="n" x="605" y="122" width="134" height="96" rx="10"/><text x="672.0" y="146" text-anchor="middle" class="t-h">K10</text><text x="672.0" y="168" text-anchor="middle" class="t-b" style="font-size:12px">Weak logging and</text><text x="672.0" y="185" text-anchor="middle" class="t-b" style="font-size:12px">monitoring</text><text x="672.0" y="208" text-anchor="middle" class="t-s" style="fill:#9ca3af">Visibility</text></svg><figcaption>Figure 1. The 2025 list. Most risks are about who can do what (access), what runs (workloads), and how far an attacker can go from one foothold (network, cloud).</figcaption></figure>
+
+  <div class="tbl"><table>
+    <tr><th>ID</th><th>Risk</th><th>One-line fix</th></tr>
+    <tr><td>K01</td><td>Insecure workload configurations</td><td>Non-root, no privileged, drop capabilities</td></tr>
+    <tr><td>K02</td><td>Overly permissive authorization</td><td>Least-privilege RBAC</td></tr>
+    <tr><td>K03</td><td>Secrets management failures</td><td>Encrypt, restrict, use a secrets manager</td></tr>
+    <tr><td>K04</td><td>Lack of cluster-level policy enforcement</td><td>Admission policies, Pod Security Admission</td></tr>
+    <tr><td>K05</td><td>Missing network segmentation</td><td>Default-deny NetworkPolicies</td></tr>
+    <tr><td>K06</td><td>Overly exposed components</td><td>Keep API server, kubelet, etcd private</td></tr>
+    <tr><td>K07</td><td>Misconfigured and vulnerable components</td><td>Patch, and run kube-bench</td></tr>
+    <tr><td>K08</td><td>Cluster to cloud lateral movement</td><td>Workload identity, block metadata service</td></tr>
+    <tr><td>K09</td><td>Broken authentication</td><td>SSO with MFA, short-lived tokens</td></tr>
+    <tr><td>K10</td><td>Inadequate logging and monitoring</td><td>Audit logs, central logging, runtime alerts</td></tr>
+  </table></div>
+
+  <h2>K01: Insecure workload configurations</h2>
+  <p>Pods run with more power than they need: as root, privileged, with host access, or with a writable filesystem. If an attacker gets code execution in such a Pod, escaping to the node is easy. This is the most common finding in real clusters.</p>
+  <h4>Check</h4>
+<pre><code># Pods running privileged
+kubectl get pods -A -o json | jq -r '.items[]
+  | select(.spec.containers[].securityContext.privileged==true)
+  | .metadata.namespace + "/" + .metadata.name'
+
+# Scan manifests for risky settings
+kube-linter lint ./k8s/
+kubesec scan deployment.yaml</code></pre>
+  <h4>Fix</h4>
+<pre><code>securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault</code></pre>
+  <ul>
+    <li>Do not use <code>privileged: true</code>, <code>hostPath</code>, <code>hostNetwork</code>, <code>hostPID</code> unless you can explain why.</li>
+    <li>Set CPU and memory limits, so one Pod cannot starve the node.</li>
+    <li>Enforce this for the whole namespace (see K04).</li>
+  </ul>
+
+  <h2>K02: Overly permissive authorization</h2>
+  <p>RBAC rules that give users or ServiceAccounts more than they need: <code>cluster-admin</code> everywhere, wildcards (<code>*</code>), or powerful verbs. A stolen ServiceAccount token is only as dangerous as its role.</p>
+  <p>These permissions are almost as good as admin: <code>create pods</code> (can start a privileged Pod), <code>get</code> or <code>list secrets</code>, <code>pods/exec</code>, <code>escalate</code>, <code>bind</code>, <code>impersonate</code>.</p>
+  <h4>Check</h4>
+<pre><code># Who is bound to cluster-admin?
+kubectl get clusterrolebindings -o json | jq -r '.items[]
+  | select(.roleRef.name=="cluster-admin")
+  | .metadata.name + " -> " + ([.subjects[]?.name] | join(","))'
+
+# What can this ServiceAccount do?
+kubectl auth can-i --list --as=system:serviceaccount:prod:web -n prod
+
+# Who can read secrets? (krew plugin)
+kubectl who-can get secrets -n prod</code></pre>
+  <h4>Fix</h4>
+  <ul>
+    <li>Use namespaced <code>Role</code> and <code>RoleBinding</code> instead of <code>ClusterRole</code> where you can.</li>
+    <li>Give each app its own ServiceAccount with only the verbs and resources it uses. Never use the <code>default</code> one for real work.</li>
+    <li>Bind people through groups from your identity provider, and review bindings regularly.</li>
+    <li>Set <code>automountServiceAccountToken: false</code> on Pods that never call the API.</li>
+  </ul>
+
+  <h2>K03: Secrets management failures</h2>
+  <p>Kubernetes Secrets are only base64-encoded, not encrypted. By default they sit in etcd in readable form, and anyone with <code>get secrets</code> permission can read them. Secrets also leak through Git repositories, environment variables printed in logs, and container images.</p>
+  <h4>Check</h4>
+<pre><code># Long-lived token Secrets (should be rare)
+kubectl get secrets -A --field-selector type=kubernetes.io/service-account-token
+
+# Secrets committed to your repo
+gitleaks detect --source .</code></pre>
+  <h4>Fix</h4>
+  <ul>
+    <li>Turn on encryption at rest for etcd (an <code>EncryptionConfiguration</code>, ideally with a KMS provider). On managed clusters, enable envelope encryption.</li>
+    <li>Limit who can <code>get</code> and <code>list</code> Secrets (K02).</li>
+    <li>Prefer an external secrets manager (Vault, AWS Secrets Manager, and so on) with the External Secrets Operator or the Secrets Store CSI driver.</li>
+    <li>Mount secrets as files rather than environment variables. Environment variables show up in <code>kubectl describe</code>, crash dumps and logs.</li>
+    <li>Never commit secrets to Git. If you must store them there, encrypt them first (SOPS, Sealed Secrets). Rotate anything that has leaked.</li>
+  </ul>
+
+  <h2>K04: Lack of cluster-level policy enforcement</h2>
+  <p>Good practices that are only written in a document do not stop anyone. Without a policy that the cluster enforces, one team's mistake (a privileged Pod, an image from a public registry) goes straight through.</p>
+  <h4>Check</h4>
+<pre><code># Is Pod Security Admission configured on your namespaces?
+kubectl get ns --show-labels | grep pod-security
+
+# Is a policy engine installed?
+kubectl get pods -A | grep -Ei "kyverno|gatekeeper"</code></pre>
+  <h4>Fix</h4>
+<pre><code># Built in: enforce the "restricted" Pod Security Standard
+kubectl label ns prod \
+  pod-security.kubernetes.io/enforce=restricted \
+  pod-security.kubernetes.io/warn=restricted</code></pre>
+  <ul>
+    <li>Add a policy engine (Kyverno or OPA Gatekeeper) or built-in ValidatingAdmissionPolicy for rules the built-in standard does not cover, such as "images only from our registry" or "resource limits required".</li>
+    <li>Start in warn or audit mode, fix what it reports, then enforce.</li>
+    <li>Check which namespaces are exempt. Attackers look for the namespace nobody covered.</li>
+  </ul>
+
+  <h2>K05: Missing network segmentation</h2>
+  <p>By default, every Pod can talk to every other Pod, and out to the internet. One compromised Pod can then scan and attack everything else.</p>
+  <h4>Check</h4>
+<pre><code># Namespaces with no NetworkPolicy at all
+kubectl get networkpolicy -A
+# Compare with: kubectl get ns</code></pre>
+  <h4>Fix</h4>
+<pre><code># Deny all traffic in the namespace, then allow only what is needed
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: prod
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]</code></pre>
+  <ul>
+    <li>Then add small allow rules per app: which Pods may call it, and where it may connect. Remember to allow DNS.</li>
+    <li>Control outbound (egress) traffic too. It limits data theft and command-and-control.</li>
+    <li>NetworkPolicies only work if your network plugin enforces them (Calico or Cilium do). Test that a blocked connection is really blocked.</li>
+  </ul>
+
+  <h2>K06: Overly exposed Kubernetes components</h2>
+  <p>Control plane and node components reachable from places they should not be: an API server open to the internet, a kubelet that accepts anonymous requests, an etcd without authentication, an exposed dashboard, or an internal service published with a <code>LoadBalancer</code> or <code>NodePort</code>.</p>
+  <h4>Check</h4>
+<pre><code># Services exposed outside the cluster
+kubectl get svc -A | grep -E "LoadBalancer|NodePort"
+
+# From outside your network (only on clusters you own):
+nmap -p 6443,10250,2379 &lt;node-or-api-ip&gt;</code></pre>
+  <h4>Fix</h4>
+  <ul>
+    <li>Make the API server endpoint private, or restrict it to known IP ranges.</li>
+    <li>Kubelet: <code>--anonymous-auth=false</code> and <code>--authorization-mode=Webhook</code>.</li>
+    <li>etcd: accept connections only from the API server, with mutual TLS.</li>
+    <li>Do not expose the Kubernetes Dashboard or other admin UIs to the internet. Put them behind SSO and a VPN.</li>
+    <li>Review every <code>LoadBalancer</code> and <code>NodePort</code> Service. Use an Ingress with TLS for web apps.</li>
+  </ul>
+
+  <h2>K07: Misconfigured and vulnerable cluster components</h2>
+  <p>Old Kubernetes versions, unpatched ingress controllers, container runtimes with known escapes, and insecure settings on the components themselves. Real examples include the runc escape CVE-2024-21626 and the ingress-nginx flaws known as IngressNightmare (CVE-2025-1974).</p>
+  <h4>Check</h4>
+<pre><code># Versions of the cluster and nodes
+kubectl version
+kubectl get nodes -o wide
+
+# Compare against the CIS Kubernetes Benchmark
+kube-bench run</code></pre>
+  <h4>Fix</h4>
+  <ul>
+    <li>Stay on a supported Kubernetes version (roughly the latest three minor releases) and apply patch releases.</li>
+    <li>Patch what runs alongside Kubernetes: ingress controller, network plugin, container runtime, node OS, and add-ons.</li>
+    <li>Scan images of cluster components the same way as your own (<a href="k8s-part-2-supply-chain.html">Part 2</a>).</li>
+    <li>Fix kube-bench findings. Many managed services handle the control plane for you, but node settings are still yours.</li>
+  </ul>
+
+  <h2>K08: Cluster to cloud lateral movement</h2>
+  <p>A compromised Pod reaches the cloud account behind the cluster. The usual path: the Pod calls the node's metadata service (<code>169.254.169.254</code>) and gets the node's cloud credentials. If the node role is broad, the attacker now has access to storage, databases and other cloud services, well beyond the cluster.</p>
+  <h4>Check</h4>
+<pre><code># From inside a test Pod: can it reach the metadata service?
+kubectl run test --rm -it --image=curlimages/curl --restart=Never -- \
+  curl -s -m 3 http://169.254.169.254/latest/meta-data/</code></pre>
+  <p>If that returns data, any compromised Pod could do the same.</p>
+  <h4>Fix</h4>
+  <ul>
+    <li>Give Pods their own cloud identity with workload identity (EKS Pod Identity or IRSA, GKE Workload Identity, Azure Workload Identity). Each ServiceAccount gets only the cloud permissions it needs.</li>
+    <li>Block the metadata service from Pods: a NetworkPolicy egress rule, and on AWS require IMDSv2 with a hop limit of 1.</li>
+    <li>Keep the node role minimal: just enough to join the cluster and pull images.</li>
+  </ul>
+
+  <h2>K09: Broken authentication mechanisms</h2>
+  <p>Weak ways of proving who you are: shared kubeconfig files, static tokens, long-lived ServiceAccount token Secrets, client certificates (Kubernetes cannot revoke them), or anonymous access left on.</p>
+  <h4>Check</h4>
+<pre><code># Can an unauthenticated user do anything?
+kubectl auth can-i --list --as=system:anonymous
+kubectl auth can-i --list --as=system:unauthenticated
+
+# Legacy long-lived ServiceAccount tokens
+kubectl get secrets -A --field-selector type=kubernetes.io/service-account-token</code></pre>
+  <h4>Fix</h4>
+  <ul>
+    <li>Log humans in with OIDC through your company SSO, with MFA. Do not hand out client certificates or shared kubeconfigs.</li>
+    <li>Use short-lived, automatically rotated ServiceAccount tokens (the default in current versions). Remove old token Secrets.</li>
+    <li>Disable anonymous authentication on the API server and kubelet unless you have a specific reason.</li>
+    <li>Remove access when people leave. With SSO this is one change.</li>
+  </ul>
+
+  <h2>K10: Inadequate logging and monitoring</h2>
+  <p>If you cannot see what happened, you cannot detect an attack or investigate one. Many Kubernetes breaches are found by someone outside the company, weeks later.</p>
+  <h4>Check</h4>
+  <ul>
+    <li>Are API server audit logs enabled, and can you search them?</li>
+    <li>Do container logs leave the node, or do they vanish when a Pod is deleted?</li>
+    <li>Would you get an alert if someone ran <code>kubectl exec</code> into a production Pod?</li>
+  </ul>
+  <h4>Fix</h4>
+  <ul>
+    <li>Enable audit logging, ship container and node logs to a central store, and alert on the events that matter.</li>
+    <li>Add runtime detection (Falco or Tetragon) for suspicious behavior inside containers.</li>
+    <li>Full walkthrough with examples: <a href="k8s-part-3-monitoring-runtime.html">Part 3: Monitoring, logging and runtime security</a>.</li>
+  </ul>
+
+  <h2>A 30-minute audit</h2>
+  <p>Run these on a cluster you own. They map to the risks above and show where you stand:</p>
+  <ol>
+    <li><code>kube-bench run</code> for cluster settings (K07).</li>
+    <li>The cluster-admin and <code>can-i</code> commands from K02, and <code>kubectl who-can get secrets</code> (K02, K03).</li>
+    <li><code>kube-linter lint</code> and <code>trivy config</code> on your manifests (K01).</li>
+    <li><code>kubectl get networkpolicy -A</code> and <code>kubectl get ns --show-labels</code> (K04, K05).</li>
+    <li><code>kubectl get svc -A</code> filtered for LoadBalancer and NodePort (K06).</li>
+    <li>The metadata service test from K08.</li>
+    <li>Ask: are audit logs on, and who gets the alerts? (K10)</li>
+  </ol>
+
+  <h2>What to fix first</h2>
+  <ol>
+    <li><strong>K06 and K09.</strong> Anything exposed to the internet, and weak ways to log in. These are the easiest for an attacker to find.</li>
+    <li><strong>K02 and K03.</strong> Over-broad RBAC and unprotected Secrets. They decide how bad a single compromise gets.</li>
+    <li><strong>K01, K04 and K05.</strong> Lock down workloads, enforce it with policy, and segment the network, so one Pod cannot reach everything.</li>
+    <li><strong>K08.</strong> Cut the path from the cluster to your cloud account.</li>
+    <li><strong>K07 and K10.</strong> Keep patching, and make sure you can see what is happening.</li>
+  </ol>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://kubernetes-top10.owasp.org/" target="_blank" rel="noopener">OWASP Kubernetes Top Ten</a></li>
+    <li><a href="https://kubernetes.io/docs/concepts/security/" target="_blank" rel="noopener">Kubernetes docs: Security</a></li>
+    <li><a href="https://github.com/aquasecurity/kube-bench" target="_blank" rel="noopener">kube-bench</a> · <a href="https://github.com/stackrox/kube-linter" target="_blank" rel="noopener">kube-linter</a> · <a href="https://github.com/controlplaneio/kubesec" target="_blank" rel="noopener">kubesec</a> · <a href="https://trivy.dev/" target="_blank" rel="noopener">Trivy</a></li>
+    <li><a href="https://www.cisecurity.org/benchmark/kubernetes" target="_blank" rel="noopener">CIS Kubernetes Benchmark</a></li>
+  </ul>
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Run the checks only on clusters you own or are authorized to test. Commands and flags change between versions, so check your platform's documentation.
+    More notes: <a href="k8s-part-1-introduction.html">Kubernetes Part 1</a> · <a href="k8s-part-2-supply-chain.html">Part 2</a> · <a href="k8s-part-3-monitoring-runtime.html">Part 3</a>
+  </footer>
+</div>
+</body>
+</html>
