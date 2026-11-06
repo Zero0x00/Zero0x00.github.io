@@ -1,0 +1,19 @@
+# Mohammad Arif
+
+> Product security engineer, security researcher and DEF CON speaker with 5+ years across application security, cloud security, DevSecOps and AI security. This site hosts my security write-ups and study notes.
+
+## Main pages
+- [Homepage](https://mohdarif.com/): background, experience, projects, talks and contact
+- [All notes and writing](https://mohdarif.com/notes/): index of every write-up
+
+## Featured write-ups
+- [JWT Security: Attacks and Server-Side Validation](https://mohdarif.com/notes/web-security/jwt-security.html): How JWT attacks work (alg, kid, jku, jwk, weak secrets, claim and authorization flaws) and how to prevent each one with server-side validation.
+- [Kubernetes Series, Part 1: How Kubernetes Works](https://mohdarif.com/notes/kubernetes/k8s-part-1-introduction.html): Part 1 of a Kubernetes security series: cluster architecture, how a request flows, and the core objects, with diagrams.
+- [Kubernetes Series, Part 2: Supply Chain Security](https://mohdarif.com/notes/kubernetes/k8s-part-2-supply-chain.html): Part 2 of a Kubernetes security series: check what goes into your images and manifests with Syft, Grype, Trivy, kube-linter and kubesec, and choose a registry safely.
+- [Kubernetes Series, Part 3: Monitoring, Logging and Runtime Security](https://mohdarif.com/notes/kubernetes/k8s-part-3-monitoring-runtime.html): Part 3 of a Kubernetes security series: what to log and watch, how to detect attacks inside running containers with Falco, and what to do when a Pod is compromised.
+- [OWASP Kubernetes Top 10 (2025): A Practical Guide](https://mohdarif.com/notes/kubernetes/owasp-k8s-top-10.html): The OWASP Kubernetes Top 10 (2025) explained simply: what each risk is, a command to check for it, and how to fix it.
+- [Threat Modeling a Multi-Tenant AI Document Platform](https://mohdarif.com/notes/LLM/threat-model-ai-document-platform.html): A worked threat model for a multi-tenant AI document analysis platform on AWS: trust boundaries, attack paths, controls, launch priorities and how to test them.
+
+## Profiles
+- [LinkedIn](https://www.linkedin.com/in/mohd--arif/)
+- [GitHub](https://github.com/Zero0x00)

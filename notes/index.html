@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Security Notes and Writing | Kubernetes, API and AI Security | Mohammad Arif</title>
+  <meta name="description" content="Security write-ups by Mohammad Arif, a product security engineer: Kubernetes security, JWT and OAuth, threat modeling, and AI and LLM security." />
+  <meta name="author" content="Mohammad Arif" />
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1" />
+  <link rel="canonical" href="https://mohdarif.com/notes/" />
+  <meta property="og:title" content="Security Notes and Writing | Mohammad Arif" />
+  <meta property="og:description" content="Security write-ups by Mohammad Arif, a product security engineer: Kubernetes security, JWT and OAuth, threat modeling, and AI and LLM security." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://mohdarif.com/notes/" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      "@id": "https://mohdarif.com/notes/#page",
+      "url": "https://mohdarif.com/notes/",
+      "name": "Security Notes and Writing",
+      "description": "Security write-ups by Mohammad Arif, a product security engineer: Kubernetes security, JWT and OAuth, threat modeling, and AI and LLM security.",
+      "isPartOf": {
+        "@id": "https://mohdarif.com/#website"
+      },
+      "about": {
+        "@id": "https://mohdarif.com/#person"
+      },
+      "mainEntity": {
+        "@id": "https://mohdarif.com/notes/#list"
+      }
+    },
+    {
+      "@type": "Blog",
+      "@id": "https://mohdarif.com/notes/#blog",
+      "url": "https://mohdarif.com/notes/",
+      "name": "Mohammad Arif: Security Notes",
+      "author": {
+        "@type": "Person",
+        "@id": "https://mohdarif.com/#person",
+        "name": "Mohammad Arif",
+        "url": "https://mohdarif.com/"
+      },
+      "inLanguage": "en-US"
+    },
+    {
+      "@type": "ItemList",
+      "@id": "https://mohdarif.com/notes/#list",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "url": "https://mohdarif.com/notes/kubernetes/k8s-part-1-introduction.html",
+          "name": "Kubernetes Series, Part 1: How Kubernetes Works"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "url": "https://mohdarif.com/notes/kubernetes/k8s-part-2-supply-chain.html",
+          "name": "Kubernetes Series, Part 2: Supply Chain Security"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "url": "https://mohdarif.com/notes/kubernetes/k8s-part-3-monitoring-runtime.html",
+          "name": "Kubernetes Series, Part 3: Monitoring, Logging and Runtime Security"
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "url": "https://mohdarif.com/notes/kubernetes/owasp-k8s-top-10.html",
+          "name": "OWASP Kubernetes Top 10 (2025): A Practical Guide"
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "url": "https://mohdarif.com/notes/web-security/jwt-security.html",
+          "name": "JWT Security: Attacks and Server-Side Validation"
+        },
+        {
+          "@type": "ListItem",
+          "position": 6,
+          "url": "https://mohdarif.com/notes/web-security/OAuth-threat_model.html",
+          "name": "OAuth 2.0 and OIDC Threat Model: Where Login Flows Break"
+        },
+        {
+          "@type": "ListItem",
+          "position": 7,
+          "url": "https://mohdarif.com/notes/web-security/PKCE.html",
+          "name": "PKCE Explained Interactively: Stopping Authorization Code Theft"
+        },
+        {
+          "@type": "ListItem",
+          "position": 8,
+          "url": "https://mohdarif.com/notes/LLM/threat-model-ai-document-platform.html",
+          "name": "Threat Modeling a Multi-Tenant AI Document Platform"
+        },
+        {
+          "@type": "ListItem",
+          "position": 9,
+          "url": "https://mohdarif.com/notes/LLM/llm-security-starter.html",
+          "name": "How LLM Systems Work, With Security Risks and Controls at Every Layer"
+        },
+        {
+          "@type": "ListItem",
+          "position": 10,
+          "url": "https://mohdarif.com/notes/LLM/openai_prompting_embeddings.html",
+          "name": "OpenAI Prompting and Embeddings: Beginner Guide"
+        },
+        {
+          "@type": "ListItem",
+          "position": 11,
+          "url": "https://mohdarif.com/notes/LLM/attention_is_all_you_need.html",
+          "name": "Attention Is All You Need: Beginner Guide to Transformer Attention"
+        },
+        {
+          "@type": "ListItem",
+          "position": 12,
+          "url": "https://mohdarif.com/notes/MCP/github_mcp_issue.html",
+          "name": "GitHub AI Agent Security: Prompt Injection in Dev Workflows"
+        },
+        {
+          "@type": "ListItem",
+          "position": 13,
+          "url": "https://mohdarif.com/notes/MCP/attack-flow.html",
+          "name": "GitHub AI Agent Attack Flow: Public Issue to Private Code"
+        },
+        {
+          "@type": "ListItem",
+          "position": 14,
+          "url": "https://mohdarif.com/notes/MCP/risk-impact.html",
+          "name": "GitHub AI Agent Vulnerability: Security Risks and Impact"
+        },
+        {
+          "@type": "ListItem",
+          "position": 15,
+          "url": "https://mohdarif.com/notes/MCP/security-comparison.html",
+          "name": "Exploitable vs Non-Exploitable: GitHub AI Agent Issue"
+        },
+        {
+          "@type": "ListItem",
+          "position": 16,
+          "url": "https://mohdarif.com/notes/aws-security/detection.html",
+          "name": "AWS Security Specialty (SCS-C03) Domain 1: Detection"
+        },
+        {
+          "@type": "ListItem",
+          "position": 17,
+          "url": "https://mohdarif.com/notes/aws-security/detection/guardduty_study_guide.html",
+          "name": "Amazon GuardDuty Study Guide for the AWS Security Specialty"
+        },
+        {
+          "@type": "ListItem",
+          "position": 18,
+          "url": "https://mohdarif.com/notes/aws-security/detection/securityhub-study-guide.html",
+          "name": "AWS Security Hub Study Guide (SCS-C03)"
+        },
+        {
+          "@type": "ListItem",
+          "position": 19,
+          "url": "https://mohdarif.com/notes/python_cheatsheet.html",
+          "name": "Python 3.11 Data Structures and Algorithms Cheat Sheet"
+        }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://mohdarif.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Notes",
+          "item": "https://mohdarif.com/notes/"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <style>
+    :root { --bg:#0b1120; --text:#e5e7eb; --muted:#9ca3af; --line:rgba(148,163,184,.28); --accent:#38bdf8; --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--text); font-family:var(--sans); line-height:1.7; font-size:1.05rem;
+      background:radial-gradient(circle at 15% 0%,rgba(56,189,248,.16),transparent 26rem),radial-gradient(circle at 85% 0%,rgba(167,139,250,.13),transparent 24rem),var(--bg); }
+    a { color:#7dd3fc; }
+    .wrap { max-width:780px; margin:0 auto; padding:28px 20px 70px; }
+    .back { font-size:.9rem; text-decoration:none; color:var(--muted); } .back:hover { color:#fff; }
+    header { margin:34px 0 20px; padding-bottom:22px; border-bottom:1px solid var(--line); }
+    .eyebrow { color:var(--accent); font-weight:800; letter-spacing:.12em; text-transform:uppercase; font-size:.76rem; }
+    h1 { font-size:clamp(2rem,5vw,2.8rem); line-height:1.1; letter-spacing:-.03em; margin:10px 0 14px; }
+    h2 { font-size:1.35rem; margin:2.2rem 0 .4rem; letter-spacing:-.01em; }
+    p { color:#d1d5db; margin:.7rem 0; }
+    .list { list-style:none; padding:0; margin:0; }
+    .list li { padding:14px 0; border-bottom:1px solid var(--line); }
+    .list a { text-decoration:none; font-size:1.05rem; } .list a:hover strong { text-decoration:underline; }
+    .d { display:block; color:var(--muted); font-size:.93rem; margin-top:2px; }
+    footer { margin-top:3rem; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:.9rem; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a>
+  <header>
+    <div class="eyebrow">Notes and writing</div>
+    <h1>Security Notes and Writing</h1>
+    <p>I'm Mohammad Arif, a product security engineer, security researcher and DEF CON speaker with 5+ years across application security, cloud, DevSecOps and AI security. These are my write-ups and study notes, grouped by topic.</p>
+  </header>
+  <h2>Kubernetes security</h2><ul class="list"><li><a href="/notes/kubernetes/k8s-part-1-introduction.html"><strong>Kubernetes Series, Part 1: How Kubernetes Works</strong></a><span class="d">Part 1 of a Kubernetes security series: cluster architecture, how a request flows, and the core objects, with diagrams.</span></li><li><a href="/notes/kubernetes/k8s-part-2-supply-chain.html"><strong>Kubernetes Series, Part 2: Supply Chain Security</strong></a><span class="d">Part 2 of a Kubernetes security series: check what goes into your images and manifests with Syft, Grype, Trivy, kube-linter and kubesec, and choose a registry safely.</span></li><li><a href="/notes/kubernetes/k8s-part-3-monitoring-runtime.html"><strong>Kubernetes Series, Part 3: Monitoring, Logging and Runtime Security</strong></a><span class="d">Part 3 of a Kubernetes security series: what to log and watch, how to detect attacks inside running containers with Falco, and what to do when a Pod is compromised.</span></li><li><a href="/notes/kubernetes/owasp-k8s-top-10.html"><strong>OWASP Kubernetes Top 10 (2025): A Practical Guide</strong></a><span class="d">The OWASP Kubernetes Top 10 (2025) explained simply: what each risk is, a command to check for it, and how to fix it.</span></li></ul><h2>Web and API security</h2><ul class="list"><li><a href="/notes/web-security/jwt-security.html"><strong>JWT Security: Attacks and Server-Side Validation</strong></a><span class="d">How JWT attacks work (alg, kid, jku, jwk, weak secrets, claim and authorization flaws) and how to prevent each one with server-side validation.</span></li><li><a href="/notes/web-security/OAuth-threat_model.html"><strong>OAuth 2.0 and OIDC Threat Model: Where Login Flows Break</strong></a><span class="d">An interactive threat model that maps OAuth 2.0 and OpenID Connect authorization bugs to the lifecycle stage where each control belongs.</span></li><li><a href="/notes/web-security/PKCE.html"><strong>PKCE Explained Interactively: Stopping Authorization Code Theft</strong></a><span class="d">How the OAuth PKCE extension stops a stolen authorization code from being redeemed by an attacker, explained interactively.</span></li></ul><h2>AI and LLM security</h2><ul class="list"><li><a href="/notes/LLM/threat-model-ai-document-platform.html"><strong>Threat Modeling a Multi-Tenant AI Document Platform</strong></a><span class="d">A worked threat model for a multi-tenant AI document analysis platform on AWS: trust boundaries, attack paths, controls, launch priorities and how to test them.</span></li><li><a href="/notes/LLM/llm-security-starter.html"><strong>How LLM Systems Work, With Security Risks and Controls at Every Layer</strong></a><span class="d">How modern LLM systems work layer by layer, what can go wrong at each layer, and which security controls reduce the risk.</span></li><li><a href="/notes/LLM/openai_prompting_embeddings.html"><strong>OpenAI Prompting and Embeddings: Beginner Guide</strong></a><span class="d">A beginner guide to prompting and text embeddings, explained in simple language.</span></li><li><a href="/notes/LLM/attention_is_all_you_need.html"><strong>Attention Is All You Need: Beginner Guide to Transformer Attention</strong></a><span class="d">A simple explanation of the Transformer attention mechanism from the &quot;Attention Is All You Need&quot; paper.</span></li><li><a href="/notes/MCP/github_mcp_issue.html"><strong>GitHub AI Agent Security: Prompt Injection in Dev Workflows</strong></a><span class="d">How AI agent vulnerabilities affect development workflows, with a walkthrough of a GitHub AI agent issue.</span></li><li><a href="/notes/MCP/attack-flow.html"><strong>GitHub AI Agent Attack Flow: Public Issue to Private Code</strong></a><span class="d">How a malicious prompt in a public GitHub issue can lead an AI agent to leak private code, step by step.</span></li><li><a href="/notes/MCP/risk-impact.html"><strong>GitHub AI Agent Vulnerability: Security Risks and Impact</strong></a><span class="d">The security risks and impact of the GitHub AI agent prompt-injection issue.</span></li><li><a href="/notes/MCP/security-comparison.html"><strong>Exploitable vs Non-Exploitable: GitHub AI Agent Issue</strong></a><span class="d">A comparison of what is and is not exploitable in the GitHub AI agent prompt-injection issue.</span></li></ul><h2>Study notes</h2><ul class="list"><li><a href="/notes/aws-security/detection.html"><strong>AWS Security Specialty (SCS-C03) Domain 1: Detection</strong></a><span class="d">A visual study sheet for Domain 1 (Detection) of the AWS Certified Security Specialty exam.</span></li><li><a href="/notes/aws-security/detection/guardduty_study_guide.html"><strong>Amazon GuardDuty Study Guide for the AWS Security Specialty</strong></a><span class="d">An interactive study guide to Amazon GuardDuty: what it sees, what each protection plan adds, how finding severity works, and Extended Threat Detection.</span></li><li><a href="/notes/aws-security/detection/securityhub-study-guide.html"><strong>AWS Security Hub Study Guide (SCS-C03)</strong></a><span class="d">A study guide to AWS Security Hub for the AWS Certified Security Specialty exam.</span></li><li><a href="/notes/python_cheatsheet.html"><strong>Python 3.11 Data Structures and Algorithms Cheat Sheet</strong></a><span class="d">An interactive Python 3.11 cheat sheet for the syntax used in data structures and algorithms.</span></li></ul>
+  <footer>
+    By <a href="/">Mohammad Arif</a> ·
+    <a href="https://www.linkedin.com/in/mohd--arif/" rel="me noopener">LinkedIn</a> ·
+    <a href="https://github.com/Zero0x00" rel="me noopener">GitHub</a>
+  </footer>
+</div>
+</body>
+</html>
