@@ -14,6 +14,7 @@
 - [OWASP Kubernetes Top 10 (2025): A Practical Guide](https://mohdarif.com/notes/kubernetes/owasp-k8s-top-10.html): The OWASP Kubernetes Top 10 (2025) explained simply: what each risk is, a command to check for it, and how to fix it.
 - [Threat Modeling a Multi-Tenant AI Document Platform](https://mohdarif.com/notes/LLM/threat-model-ai-document-platform.html): A worked threat model for a multi-tenant AI document analysis platform on AWS: trust boundaries, attack paths, controls, launch priorities and how to test them.
 - [Investigating and Containing Compromised AWS STS Credentials Across Accounts](https://mohdarif.com/notes/aws-security/cross-account-sts-incident-response.html): A worked AWS incident response: trace a bulk S3 download to an STS session using only one account's CloudTrail, then contain it without taking down the services that share the role.
+- [SSRF on AWS: From a URL Parameter to Instance Credentials](https://mohdarif.com/notes/web-security/ssrf-aws-metadata-credentials.html): How an image-download feature on EC2 can leak AWS credentials, why three common fixes fail, and what a safe design looks like.
 
 ## Profiles
 - [LinkedIn](https://www.linkedin.com/in/mohd--arif/)
