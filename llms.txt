@@ -13,6 +13,7 @@
 - [Kubernetes Series, Part 3: Monitoring, Logging and Runtime Security](https://mohdarif.com/notes/kubernetes/k8s-part-3-monitoring-runtime.html): Part 3 of a Kubernetes security series: what to log and watch, how to detect attacks inside running containers with Falco, and what to do when a Pod is compromised.
 - [OWASP Kubernetes Top 10 (2025): A Practical Guide](https://mohdarif.com/notes/kubernetes/owasp-k8s-top-10.html): The OWASP Kubernetes Top 10 (2025) explained simply: what each risk is, a command to check for it, and how to fix it.
 - [Threat Modeling a Multi-Tenant AI Document Platform](https://mohdarif.com/notes/LLM/threat-model-ai-document-platform.html): A worked threat model for a multi-tenant AI document analysis platform on AWS: trust boundaries, attack paths, controls, launch priorities and how to test them.
+- [Investigating and Containing Compromised AWS STS Credentials Across Accounts](https://mohdarif.com/notes/aws-security/cross-account-sts-incident-response.html): A worked AWS incident response: trace a bulk S3 download to an STS session using only one account's CloudTrail, then contain it without taking down the services that share the role.
 
 ## Profiles
 - [LinkedIn](https://www.linkedin.com/in/mohd--arif/)

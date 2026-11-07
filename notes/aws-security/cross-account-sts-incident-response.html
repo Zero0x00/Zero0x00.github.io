@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Investigating and Containing Compromised AWS STS Credentials Across Accounts | Mohammad Arif</title>
+  <meta name="description" content="A worked AWS incident response: trace a bulk S3 download to an STS session using only one account&#x27;s CloudTrail, then contain it without taking down the services that share the role." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/aws-security/cross-account-sts-incident-response.html" />
+  <meta property="og:title" content="Investigating and Containing Compromised AWS STS Credentials Across Accounts" />
+  <meta property="og:description" content="A worked AWS incident response: trace a bulk S3 download to an STS session using only one account&#x27;s CloudTrail, then contain it without taking down the services that share the role." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .tag { display:inline-block; font-size:.7rem; font-weight:800; letter-spacing:.06em; padding:1px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; border:1px solid var(--line); color:var(--muted); }
+    .tag.crit { color:#fb7185; border-color:#fb7185; } .tag.high { color:#fbbf24; border-color:#fbbf24; } .tag.med { color:#7dd3fc; border-color:#7dd3fc; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+  <meta property="article:published_time" content="2026-11-06" />
+  <meta property="article:modified_time" content="2026-11-06" />
+  <meta property="article:author" content="https://mohdarif.com/" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Investigating and Containing Compromised AWS STS Credentials Across Accounts",
+  "description": "A worked AWS incident response: trace a bulk S3 download to an STS session using only one account's CloudTrail, then contain it without taking down the services that share the role.",
+  "url": "https://mohdarif.com/notes/aws-security/cross-account-sts-incident-response.html",
+  "mainEntityOfPage": "https://mohdarif.com/notes/aws-security/cross-account-sts-incident-response.html",
+  "datePublished": "2026-11-06",
+  "dateModified": "2026-11-06",
+  "inLanguage": "en-US",
+  "image": "https://mohdarif.com/og-image.png",
+  "author": {
+    "@type": "Person",
+    "@id": "https://mohdarif.com/#person",
+    "name": "Mohammad Arif",
+    "url": "https://mohdarif.com/"
+  },
+  "publisher": {
+    "@id": "https://mohdarif.com/#person"
+  },
+  "isPartOf": {
+    "@id": "https://mohdarif.com/notes/#blog"
+  },
+  "articleSection": "Cloud security",
+  "keywords": [
+    "AWS incident response",
+    "STS credentials",
+    "cross-account AssumeRole",
+    "CloudTrail investigation",
+    "aws:TokenIssueTime",
+    "S3 data exfiltration",
+    "IAM explicit deny",
+    "cloud security"
+  ]
+}
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a> · <a class="back" href="/notes/">All notes</a>
+
+  <header>
+    <div class="eyebrow">Cloud Security · Incident Response</div>
+    <h1>Investigating and Containing Compromised AWS STS Credentials Across Accounts</h1>
+    <p class="sub">A worked incident: trace a bulk S3 download back to a session using one account's logs, then stop it without taking down the services that share the role.</p>
+    <div class="byline">By Mohammad Arif · 14 min read</div>
+  </header>
+
+  <p>An alert says a large number of objects were downloaded from a sensitive S3 bucket. The activity used a role assumed from another AWS account, and the temporary credentials are still valid. This post covers two questions an incident commander will ask: <strong>what happened</strong>, and <strong>can we stop it right now without causing an outage?</strong> The answers depend on knowing exactly what AWS logs prove and what IAM changes actually affect.</p>
+
+  <h2>1. The scenario</h2>
+  <ul>
+    <li>Your company uses several AWS accounts under AWS Organizations.</li>
+    <li>An application on an EC2 instance in <strong>Account A</strong> has an IAM role (<code>AppRole</code>) that is allowed to assume a role in <strong>Account B</strong>.</li>
+    <li>The role in Account B, <code>ProductionDataReader</code>, can read a sensitive S3 bucket. Five other production services also use it.</li>
+    <li>An alert shows a large download from the bucket. The team suspects the EC2 instance was compromised and that its credentials were used to assume the role.</li>
+    <li>You can see CloudTrail and IAM in <strong>Account B only</strong>. You cannot see Account A.</li>
+    <li>The attacker's temporary credentials have about 45 minutes left.</li>
+  </ul>
+
+  <figure><svg viewBox="0 0 760 366" role="img" aria-label="Two AWS accounts: an EC2 instance in Account A assumes a role in Account B that reads a sensitive S3 bucket; an attacker may use the same credentials from elsewhere"><defs><marker id="e1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect x="14" y="30" width="228" height="236" rx="14" style="fill:rgba(148,163,184,.04);stroke:rgba(148,163,184,.3);stroke-dasharray:5 4"/><text x="28" y="52" class="t-h" style="fill:#9ca3af">ACCOUNT A: NOT VISIBLE</text><rect class="n" x="34" y="100" width="188" height="64" rx="10"/><text x="128.0" y="124" text-anchor="middle" class="t-b">EC2 instance</text><text x="128.0" y="142" text-anchor="middle" class="t-s">role: AppRole</text><text x="34" y="200" class="t-s">Its logs and network data are</text><text x="34" y="216" class="t-s">not available to us here.</text><rect class="zone" x="290" y="30" width="456" height="236" rx="14" style="fill:rgba(56,189,248,.04);stroke:rgba(56,189,248,.4);stroke-dasharray:5 4"/><text x="306" y="52" class="t-h">ACCOUNT B: WE HAVE CLOUDTRAIL</text><rect class="n" x="310" y="76" width="130" height="56" rx="10"/><text x="375.0" y="100" text-anchor="middle" class="t-b">STS</text><text x="375.0" y="118" text-anchor="middle" class="t-s">AssumeRole</text><rect class="hl" x="310" y="170" width="176" height="56" rx="10"/><text x="398" y="194" text-anchor="middle" class="t-b">ProductionDataReader</text><text x="398" y="212" text-anchor="middle" class="t-s">also used by 5 services</text><rect class="risk" x="580" y="120" width="150" height="56" rx="10"/><text x="655.0" y="144" text-anchor="middle" class="t-b">S3 bucket</text><text x="655.0" y="162" text-anchor="middle" class="t-s">sensitive-data</text><path class="ln" d="M222 124L310 104" marker-end="url(#e1)"/><text x="228" y="108" class="t-s">1</text><path class="ln" d="M375 132V170" marker-end="url(#e1)"/><text x="384" y="156" class="t-s">session credentials</text><path class="ln" d="M486 190L580 162" marker-end="url(#e1)"/><text x="500" y="208" class="t-s">2 GetObject</text><rect class="risk" x="14" y="290" width="190" height="46" rx="10"/><text x="109.0" y="312" text-anchor="middle" class="t-b">Attacker</text><text x="109.0" y="328" text-anchor="middle" class="t-s">holds stolen credentials</text><path class="ln" d="M204 313H655V176" style="stroke-dasharray:5 4" marker-end="url(#e1)"/><text x="260" y="306" class="t-s">same credentials, used from elsewhere?</text><rect class="risk" x="412" y="58" width="26" height="18" rx="9"/><text x="425" y="71" text-anchor="middle" style="font-size:10px;font-weight:800;fill:#fecdd3">E1</text><rect class="risk" x="702" y="102" width="26" height="18" rx="9"/><text x="715" y="115" text-anchor="middle" style="font-size:10px;font-weight:800;fill:#fecdd3">E2</text><text x="14" y="358" class="t-s">E1, E2 = CloudTrail events in Account B: the AssumeRole call, and the S3 data events.</text></svg><figcaption>Figure 1. The scenario. Everything in Account B is visible. Account A, and what the attacker did with the credentials, must be inferred from what Account B records.</figcaption></figure>
+
+  <h2>2. Evidence: what logs prove, suggest and leave unknown</h2>
+  <p>Keep these three apart in everything you write down. Mixing them up is how incident reports turn into guesses.</p>
+  <div class="tbl"><table>
+    <tr><th>Level</th><th>Examples here</th></tr>
+    <tr><td><strong>Proves</strong></td><td>A specific STS session made specific API calls, at specific times, from a specific source IP and user agent.</td></tr>
+    <tr><td><strong>Suggests</strong></td><td>Where the activity came from (a network, a tool such as the AWS CLI or a Python SDK), and which workload owned the credentials.</td></tr>
+    <tr><td><strong>Unknown</strong></td><td>Which process or person used the credentials, whether they were stolen or misused by an insider, and what else the attacker did outside the logs you can see.</td></tr>
+  </table></div>
+
+  <h2>3. Investigation, step by step</h2>
+  <p>Start from what you know for sure (the suspicious S3 activity) and work backward to the identity. Do not start by searching for <code>AssumeRole</code> and hoping.</p>
+
+  <h3>Step 0: Check that the evidence exists</h3>
+  <p>CloudTrail records S3 <em>object-level</em> actions such as <code>GetObject</code> only if <strong>data events</strong> are enabled for the bucket. They are off by default. Without them you can see who assumed the role, but not which objects were read. Alternatives are S3 server access logs (if enabled) and GuardDuty S3 findings. Find out in the first minutes what you have, because it decides how well you can measure the damage.</p>
+
+  <h3>Step 1: Read the S3 events</h3>
+  <p>Look at the <code>GetObject</code> events for the bucket in the alert window and pull out the session identity:</p>
+  <div class="tbl"><table>
+    <tr><th>Field</th><th>What it tells you</th></tr>
+    <tr><td><code>userIdentity.type</code>, <code>arn</code></td><td>An assumed-role session: <code>arn:aws:sts::&lt;account&gt;:assumed-role/ProductionDataReader/&lt;session-name&gt;</code></td></tr>
+    <tr><td><code>userIdentity.accessKeyId</code></td><td>The temporary access key (starts with <code>ASIA</code>). This is the key you will follow.</td></tr>
+    <tr><td><code>userIdentity.sessionContext</code></td><td>The role that was assumed, and when the session was created</td></tr>
+    <tr><td><code>sourceIPAddress</code>, <code>userAgent</code></td><td>Where the request came from and what tool made it</td></tr>
+    <tr><td><code>requestParameters</code> (bucket, key)</td><td>Which objects were read</td></tr>
+    <tr><td><code>eventTime</code></td><td>When it started, how fast, and whether it is still going</td></tr>
+  </table></div>
+<pre><code>-- Athena over CloudTrail logs (adjust names to your table)
+SELECT eventtime, sourceipaddress, useragent,
+       useridentity.accesskeyid,
+       json_extract_scalar(requestparameters, '$.key') AS object_key
+FROM cloudtrail_logs
+WHERE eventsource = 's3.amazonaws.com'
+  AND eventname = 'GetObject'
+  AND useridentity.sessioncontext.sessionissuer.arn LIKE '%role/ProductionDataReader'
+  AND eventtime &gt; '2026-11-04T17:00:00Z'
+ORDER BY eventtime;</code></pre>
+  <p>Group the results by <code>accessKeyId</code> and <code>sourceIPAddress</code>. Five legitimate services and one attacker will usually form separate groups. The suspicious one is the key with the unusual IP, user agent, volume or object pattern.</p>
+
+  <h3>Step 2: Link the key to its AssumeRole event</h3>
+  <p>Now find the STS call that created that key. In Account B, the <code>AssumeRole</code> event includes:</p>
+  <div class="tbl"><table>
+    <tr><th>Field</th><th>Use</th></tr>
+    <tr><td><code>responseElements.credentials.accessKeyId</code></td><td><strong>The link.</strong> Match it to the <code>accessKeyId</code> in the S3 events. This is exact, unlike matching by time or IP.</td></tr>
+    <tr><td><code>userIdentity</code> (the caller)</td><td>The calling account and principal, and the caller's own access key</td></tr>
+    <tr><td><code>requestParameters.roleArn</code>, <code>roleSessionName</code></td><td>Which role, and the session name the caller chose</td></tr>
+    <tr><td><code>sourceIdentity</code> (if used)</td><td>A name that stays attached to the session, set at assume time</td></tr>
+    <tr><td><code>sourceIPAddress</code>, <code>userAgent</code></td><td>Network origin and tool for the <em>assume</em> call</td></tr>
+    <tr><td><code>responseElements.credentials.expiration</code></td><td>When the credentials die. Tells you how long you have.</td></tr>
+  </table></div>
+  <p>Do not link events by IP address or timestamp alone. Several sessions can share a NAT gateway, and many sessions can start in the same minute. The access key ID is the key.</p>
+
+  <h3>Step 3: Work out who called, and what that does and does not prove</h3>
+  <p>The caller's identity shows the source account (Account A) and the principal that assumed the role. For credentials from an EC2 instance profile, the session name is normally the instance ID, so the event may name the instance whose credentials were used. That is a strong lead.</p>
+  <p>It is still not proof of who acted. Credentials can be copied off an instance and used from anywhere. Compare the <code>sourceIPAddress</code> in the assume call with the instance's known public or NAT address (from Account A):</p>
+  <ul>
+    <li><strong>It matches:</strong> the activity probably came from or through that network. It could still be an attacker on the instance, or another workload behind the same NAT.</li>
+    <li><strong>It does not match:</strong> the credentials were likely taken from the instance and used elsewhere.</li>
+  </ul>
+  <p>An IP address is a network location, not an identity. It can belong to a NAT gateway, proxy, VPN or other shared infrastructure.</p>
+
+  <h3>Step 4: Scope everything that key did</h3>
+  <p>Search all events for that access key ID, in all services and regions, not only S3:</p>
+  <ul>
+    <li>Other buckets, <code>ListBucket</code> calls, and other services the role can reach.</li>
+    <li>Further <code>AssumeRole</code> calls (role chaining into other accounts).</li>
+    <li>IAM changes or attempts to create persistence.</li>
+    <li>The earliest activity from that caller or IP, to find when it started.</li>
+  </ul>
+  <p>Write down the object list, count and bytes read. Legal and privacy teams will need the exact scope, and it is only as good as the logging you confirmed in Step 0.</p>
+
+  <h3>Can Account B alone identify the instance or the attacker?</h3>
+  <p><strong>Partly.</strong> Account B can tell you the calling account, the calling role, usually the session name (often the instance ID), the source IP and the tool. It cannot tell you what ran on the instance, who the attacker is, or how they got the credentials. For that you need Account A: its CloudTrail, GuardDuty findings, VPC flow logs, EC2 inventory and logs from the host itself.</p>
+
+  <h2>4. Containment: stop it without an outage</h2>
+  <p>The credentials still have 45 minutes left and five legitimate services use the same role. First, the facts that decide what works.</p>
+
+  <h3>Changing the trust policy does not stop existing sessions</h3>
+  <p>The trust policy controls <em>who can assume</em> the role. Tightening it blocks new assumptions only. Credentials already issued keep working until they expire (an hour by default, up to the role's maximum session duration). Tightening the trust policy is worth doing to stop the attacker getting fresh credentials, but it does nothing about the session they already hold.</p>
+
+  <h3>Your options</h3>
+  <div class="tbl"><table>
+    <tr><th>Mechanism</th><th>What it does</th><th>Trade-off</th></tr>
+    <tr><td>Change the trust policy</td><td>Stops new role assumptions</td><td>Existing credentials keep working</td></tr>
+    <tr><td>Targeted explicit deny</td><td>Blocks one session using an identity condition</td><td>Needs an attribute that uniquely identifies the bad session</td></tr>
+    <tr><td>Deny by <code>aws:TokenIssueTime</code></td><td>Blocks every session issued before a cutoff time</td><td>Also blocks legitimate sessions issued before the cutoff until they refresh</td></tr>
+    <tr><td>S3 bucket policy explicit deny</td><td>Protects the data immediately, whatever the role</td><td>Can block real applications if too broad. Keep an admin exception.</td></tr>
+    <tr><td>Network conditions (IP, VPC endpoint)</td><td>Limits requests to approved network paths</td><td>Fails if the attacker shares an approved path</td></tr>
+    <tr><td>Delete the role</td><td>Removes the access</td><td>Causes the outage you were trying to avoid, and loses configuration you need</td></tr>
+  </table></div>
+
+  <h3>Option 1: Deny the specific session</h3>
+  <p>If the bad session can be told apart from the good ones, deny just that. For an assumed-role session, <code>aws:userid</code> has the form <code>&lt;role-id&gt;:&lt;session-name&gt;</code>, so a unique session name works. <code>aws:SourceIdentity</code> and session tags can work too, if you set them up beforehand.</p>
+<pre><code>{
+  "Effect": "Deny",
+  "Action": "*",
+  "Resource": "*",
+  "Condition": {
+    "StringLike": { "aws:userid": "AROAEXAMPLEROLEID:suspicious-session-name" }
+  }
+}</code></pre>
+  <p>This only works if the attribute is genuinely unique. The caller chooses the session name. If legitimate services use the same name (for example a default like <code>app</code>), a deny on it would cut them off as well. Check the real values in CloudTrail before relying on this.</p>
+
+  <h3>Option 2: Deny everything issued before a cutoff</h3>
+  <p>If you cannot isolate the session, deny all sessions issued before a chosen time. The condition key <code>aws:TokenIssueTime</code> records when the temporary credentials were created.</p>
+<pre><code>{
+  "Effect": "Deny",
+  "Action": "s3:GetObject",
+  "Resource": "arn:aws:s3:::sensitive-data/*",
+  "Condition": {
+    "DateLessThan": { "aws:TokenIssueTime": "2026-11-04T18:00:00Z" }
+  }
+}</code></pre>
+
+  <figure><svg viewBox="0 0 760 250" role="img" aria-label="Timeline showing a deny with an 18:00 cutoff: sessions issued at 17:30 and 17:45 are denied, a session issued at 18:15 is not covered">
+<rect x="60" y="40" width="320" height="110" rx="6" style="fill:rgba(251,113,133,.10)"/>
+<rect x="380" y="40" width="320" height="110" rx="6" style="fill:rgba(52,211,153,.10)"/>
+<path d="M60 95H700" style="stroke:#94a3b8;stroke-width:1.4;fill:none"/>
+<path d="M380 30V158" style="stroke:#38bdf8;stroke-width:1.6;stroke-dasharray:5 4;fill:none"/>
+<text x="380" y="24" text-anchor="middle" class="t-h">CUTOFF 18:00 UTC</text>
+<circle cx="220" cy="95" r="7" style="fill:#fb7185"/><text x="220" y="68" text-anchor="middle" class="t-b" style="font-size:12px">Attacker</text><text x="220" y="82" text-anchor="middle" class="t-s">17:30</text>
+<circle cx="300" cy="95" r="7" style="fill:#fbbf24"/><text x="300" y="68" text-anchor="middle" class="t-b" style="font-size:12px">Service A</text><text x="300" y="82" text-anchor="middle" class="t-s">17:45</text>
+<circle cx="460" cy="95" r="7" style="fill:#34d399"/><text x="460" y="68" text-anchor="middle" class="t-b" style="font-size:12px">Service B</text><text x="460" y="82" text-anchor="middle" class="t-s">18:15</text>
+<text x="220" y="132" text-anchor="middle" class="t-s">Issued before the cutoff: denied</text>
+<text x="540" y="132" text-anchor="middle" class="t-s">Issued after: not covered by this deny</text>
+<text x="60" y="168" text-anchor="middle" class="t-s">17:00</text><text x="220" y="168" text-anchor="middle" class="t-s">17:30</text><text x="380" y="168" text-anchor="middle" class="t-s">18:00</text><text x="540" y="168" text-anchor="middle" class="t-s">18:30</text><text x="700" y="168" text-anchor="middle" class="t-s">19:00</text>
+<text x="60" y="205" class="t-s">The deny blocks any request signed with credentials issued before 18:00. The attacker is blocked, and so is Service A,</text>
+<text x="60" y="222" class="t-s">even though it is legitimate. Service A works again once it gets fresh credentials.</text>
+</svg><figcaption>Figure 2. A time-based deny. It cannot tell attacker from legitimate sessions, only old from new, so legitimate services must refresh their credentials.</figcaption></figure>
+
+  <p>Walk through three sessions with a cutoff at 18:00 UTC:</p>
+  <div class="tbl"><table>
+    <tr><th>Session</th><th>Issued</th><th>Result</th></tr>
+    <tr><td>Attacker</td><td>17:30</td><td>Denied. Issued before the cutoff.</td></tr>
+    <tr><td>Service A</td><td>17:45</td><td>Denied. Issued before the cutoff, even though it is legitimate.</td></tr>
+    <tr><td>Service B</td><td>18:15</td><td>Not affected by this statement. It still needs permission from the rest of the policies.</td></tr>
+  </table></div>
+  <p>Two limits you must state out loud:</p>
+  <ul>
+    <li><strong>Scope.</strong> The example above denies only <code>s3:GetObject</code> on one bucket. The attacker's credentials can still call DynamoDB, other buckets or other APIs the role allows. During an active incident, widen it to <code>"Action": "*"</code> for old sessions, or review what else the role can do. The IAM console's "Revoke active sessions" button does the wide version by attaching a deny policy for sessions issued before now.</li>
+    <li><strong>Collateral.</strong> Every legitimate session issued before the cutoff is blocked until it gets new credentials. Whether that is an outage depends on how each service refreshes.</li>
+  </ul>
+
+  <h3>The safe order for the legitimate services</h3>
+  <ol>
+    <li>List the workloads that use the role and how each gets its credentials.</li>
+    <li>Have them obtain fresh sessions after the cutoff: through their normal credential refresh, or a controlled restart where needed.</li>
+    <li>Verify in CloudTrail that new <code>AssumeRole</code> events appeared with creation times after the cutoff, and check application health.</li>
+    <li>Apply the deny. IAM changes are eventually consistent, so allow a short time for them to take effect.</li>
+    <li>Confirm the attacker's access key now gets <code>AccessDenied</code> in CloudTrail and the services are still healthy.</li>
+  </ol>
+  <div class="box"><p><strong>If data is leaving right now, containment comes first.</strong> Apply the deny, or restrict the bucket, immediately, and accept a short, planned disruption. Agree this with the incident commander and the service owners. A disruption-free rollout is not worth more confidential data being downloaded.</p></div>
+
+  <h3>The fast, narrow option: protect the bucket</h3>
+  <p>An explicit deny in the <strong>bucket policy</strong> protects the data at once and does not depend on the role. For example, deny <code>GetObject</code> except for approved roles and expected network paths, and keep an exception for incident responders so you do not lock yourself out. It buys time while you work out the precise session deny.</p>
+
+  <h3>What about IP and network restrictions?</h3>
+  <p>They can help as an extra layer, but do not rely on them:</p>
+  <ul>
+    <li>If the attacker works through the same compromised instance or the same NAT gateway as legitimate traffic, an IP allowlist lets them through.</li>
+    <li>Production services may reach AWS through VPC endpoints, not fixed public IPs. Use <code>aws:SourceVpce</code> or <code>aws:SourceVpc</code> for those. <code>aws:SourceIp</code> does not apply to requests that come through a VPC endpoint.</li>
+    <li>Adding legitimate IPs one at a time while watching for failures, during an incident, risks outages and mistakes. Establish the real network paths first, in advance if you can.</li>
+  </ul>
+
+  <h3>If you cannot tell the attacker from legitimate sessions</h3>
+  <p>Then no precise deny exists. Stop the exfiltration first (bucket-level deny or the cutoff deny), accept a controlled disruption, and rebuild the legitimate services' access in the right order afterwards.</p>
+
+  <h2>5. Contain the source in Account A</h2>
+  <p>You cannot see Account A, but you can ask its owners to act:</p>
+  <ul>
+    <li><strong>Isolate the instance.</strong> Swap its security group for one with no outbound access. Do not terminate it, because you need its disk and memory for forensics. Snapshot its volumes.</li>
+    <li><strong>Revoke the role's sessions in Account A only after isolating the host.</strong> A running instance fetches fresh credentials from its metadata service. If the attacker is still on the host, revoking first just hands them new credentials.</li>
+    <li><strong>Find the way in.</strong> Common causes are a web flaw that reaches the instance metadata service (SSRF), remote code execution, or a leaked key. Fix that cause.</li>
+    <li><strong>Rotate every secret</strong> that was on the instance or reachable from it, and check other instances that use the same role.</li>
+    <li>Look for GuardDuty findings about instance credentials being used from another network.</li>
+  </ul>
+
+  <h2>6. Make the next incident easier</h2>
+  <ul>
+    <li>Turn on S3 data events (or server access logs) for sensitive buckets before you need them.</li>
+    <li>Give each service its <strong>own role</strong> and a distinct, meaningful session name. A shared role like <code>ProductionDataReader</code> is what made this containment hard.</li>
+    <li>Require <code>sts:SourceIdentity</code> on cross-account role assumption, so sessions carry a name that cannot be changed later.</li>
+    <li>Restrict the trust policy to specific principals and your organization (<code>aws:PrincipalOrgID</code>).</li>
+    <li>Keep session durations short.</li>
+    <li>Require IMDSv2 on instances, with a hop limit of 1, to make metadata credential theft harder.</li>
+    <li>On sensitive buckets, require access through a VPC endpoint and named roles.</li>
+    <li>Alert on <code>AssumeRole</code> from unusual IPs or tools, and on unusual download volume.</li>
+    <li>Send CloudTrail to a separate log archive account with log file validation enabled.</li>
+    <li>Write and practice the containment steps above, so nobody learns IAM behavior during an incident.</li>
+  </ul>
+
+  <h2>7. Briefing the incident commander</h2>
+  <p>Use this order: decision, mechanism, verification, impact. For example:</p>
+  <div class="box"><p>"I would deny the compromised session in Account B now. I identified it from the S3 events by its access key and linked it to the AssumeRole call. Its session name is shared with a legitimate service, so I can't deny it individually. Instead I'll deny all sessions issued before 18:00, which also blocks the five services until they refresh. They need to restart or refresh their credentials, which the owners can do in about ten minutes. Because data is still leaving, I recommend applying the deny first and accepting that short disruption. Afterwards I'll confirm the attacker's key gets AccessDenied and that the services are healthy. In parallel, Account A's owners should isolate the instance and preserve its disk."</p></div>
+
+  <h2>8. Things that sound right but are not</h2>
+  <div class="tbl"><table>
+    <tr><th>What you hear</th><th>Why it is not enough</th></tr>
+    <tr><td>"Update the trust policy to stop them."</td><td>It only blocks new assumptions. Existing sessions keep working.</td></tr>
+    <tr><td>"Rotate the role."</td><td>A role has no password to rotate. You can cut off existing sessions or force new ones.</td></tr>
+    <tr><td>"Block the attacker's IP."</td><td>They can change network. The IP may also be shared with legitimate traffic.</td></tr>
+    <tr><td>"That IP is our EC2 instance, so the instance did it."</td><td>An IP is a location. Credentials can be used from elsewhere, and addresses are often shared.</td></tr>
+    <tr><td>"Delete the role."</td><td>It causes the outage and removes evidence of how it was configured.</td></tr>
+    <tr><td>"Our alert will tell us if it happens again."</td><td>Detection does not undo a download that already happened.</td></tr>
+  </table></div>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>Start from the known S3 activity, then link it to the STS session by <strong>access key ID</strong>, not by IP or time.</li>
+    <li>Say clearly what the logs prove, what they suggest, and what is unknown.</li>
+    <li>Changing a trust policy does not end sessions already issued.</li>
+    <li>Use a targeted deny only when an attribute is truly unique. Otherwise use a cutoff deny with <code>aws:TokenIssueTime</code>, and know its scope and collateral damage.</li>
+    <li>If data is actively leaving, stop it first and coordinate the disruption.</li>
+    <li>Contain the source in Account A, but isolate the host before revoking its role.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html" target="_blank" rel="noopener">AWS docs: Revoking IAM role temporary security credentials</a></li>
+    <li><a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-user-identity.html" target="_blank" rel="noopener">AWS docs: CloudTrail userIdentity element</a></li>
+    <li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html" target="_blank" rel="noopener">AWS docs: Global condition context keys</a></li>
+    <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/what-is-guardduty.html" target="_blank" rel="noopener">Amazon GuardDuty documentation</a></li>
+  </ul>
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. This is a general example. Field names and console behavior can change, so check the current AWS documentation before using it during a real incident.
+    More notes: <a href="../LLM/threat-model-ai-document-platform.html">Threat model: AI document platform</a> · <a href="detection/guardduty_study_guide.html">GuardDuty study guide</a>
+  </footer>
+</div>
+</body>
+</html>
