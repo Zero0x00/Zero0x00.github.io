@@ -151,29 +151,31 @@
   <p>Start from what you know for sure (the suspicious S3 activity) and work backward to the identity. Do not start by searching for <code>AssumeRole</code> and hoping.</p>
 
   <h3>Step 0: Check that the evidence exists</h3>
-  <p>CloudTrail records S3 <em>object-level</em> actions such as <code>GetObject</code> only if <strong>data events</strong> are enabled for the bucket. They are off by default. Without them you can see who assumed the role, but not which objects were read. Alternatives are S3 server access logs (if enabled) and GuardDuty S3 findings. Find out in the first minutes what you have, because it decides how well you can measure the damage.</p>
+  <p>CloudTrail records S3 <em>object-level</em> actions such as <code>GetObject</code> only if <strong>data events</strong> are enabled for the bucket. They are off by default and billed separately, and you select each resource type on its own (general purpose buckets and S3 directory buckets use different types). Without them you can see who assumed the role, but not which objects were read. Alternatives are S3 server access logs (if enabled) and GuardDuty S3 findings. Find out in the first minutes what you have, because it decides how well you can measure the damage.</p>
 
   <h3>Step 1: Read the S3 events</h3>
   <p>Look at the <code>GetObject</code> events for the bucket in the alert window and pull out the session identity:</p>
   <div class="tbl"><table>
     <tr><th>Field</th><th>What it tells you</th></tr>
     <tr><td><code>userIdentity.type</code>, <code>arn</code></td><td>An assumed-role session: <code>arn:aws:sts::&lt;account&gt;:assumed-role/ProductionDataReader/&lt;session-name&gt;</code></td></tr>
-    <tr><td><code>userIdentity.accessKeyId</code></td><td>The temporary access key (starts with <code>ASIA</code>). This is the key you will follow.</td></tr>
-    <tr><td><code>userIdentity.sessionContext</code></td><td>The role that was assumed, and when the session was created</td></tr>
+    <tr><td><code>userIdentity.accessKeyId</code></td><td>The temporary access key (starts with <code>ASIA</code>). This is the key you will follow. AWS notes it can be missing or empty in some events, so also record the fields below.</td></tr>
+    <tr><td><code>userIdentity.principalId</code>, <code>sessionContext</code></td><td>The session ID (<code>AROA...:session-name</code>), the role that was assumed, when the credentials were issued (<code>creationDate</code>), and <code>sourceIdentity</code> if one was set</td></tr>
     <tr><td><code>sourceIPAddress</code>, <code>userAgent</code></td><td>Where the request came from and what tool made it</td></tr>
     <tr><td><code>requestParameters</code> (bucket, key)</td><td>Which objects were read</td></tr>
     <tr><td><code>eventTime</code></td><td>When it started, how fast, and whether it is still going</td></tr>
   </table></div>
-<pre><code>-- Athena over CloudTrail logs (adjust names to your table)
+<pre><code>-- Athena, table partitioned by region, year, month, day (adjust names to your table)
 SELECT eventtime, sourceipaddress, useragent,
        useridentity.accesskeyid,
        json_extract_scalar(requestparameters, '$.key') AS object_key
 FROM cloudtrail_logs
 WHERE eventsource = 's3.amazonaws.com'
   AND eventname = 'GetObject'
-  AND useridentity.sessioncontext.sessionissuer.arn LIKE '%role/ProductionDataReader'
+  AND useridentity.sessioncontext.sessionissuer.arn LIKE '%/ProductionDataReader'
+  AND region = 'us-east-1' AND year = '2026' AND month = '11' AND day = '04'
   AND eventtime &gt; '2026-11-04T17:00:00Z'
 ORDER BY eventtime;</code></pre>
+  <p>The table that the CloudTrail console creates for you is not partitioned, so every query scans all the log files. For incident work, use a partitioned table (region, year, month and day, with the partitions loaded) or partition projection, and always filter on those columns. CloudTrail Lake is another option. Otherwise queries are slow and costly when you need answers fast.</p>
   <p>Group the results by <code>accessKeyId</code> and <code>sourceIPAddress</code>. Five legitimate services and one attacker will usually form separate groups. The suspicious one is the key with the unusual IP, user agent, volume or object pattern.</p>
 
   <h3>Step 2: Link the key to its AssumeRole event</h3>
@@ -181,16 +183,18 @@ ORDER BY eventtime;</code></pre>
   <div class="tbl"><table>
     <tr><th>Field</th><th>Use</th></tr>
     <tr><td><code>responseElements.credentials.accessKeyId</code></td><td><strong>The link.</strong> Match it to the <code>accessKeyId</code> in the S3 events. This is exact, unlike matching by time or IP.</td></tr>
-    <tr><td><code>userIdentity</code> (the caller)</td><td>The calling account and principal, and the caller's own access key</td></tr>
+    <tr><td><code>responseElements.assumedRoleUser</code></td><td>The assumed-role ARN and ID (<code>AROA...:session-name</code>). That ID is the value <code>aws:userid</code> takes for this session.</td></tr>
+    <tr><td><code>userIdentity</code> (the caller)</td><td>In the target account this entry is minimal: type <code>AWSAccount</code>, the calling account ID and a principal ID. The full caller ARN and access key are recorded in the calling account's own log.</td></tr>
     <tr><td><code>requestParameters.roleArn</code>, <code>roleSessionName</code></td><td>Which role, and the session name the caller chose</td></tr>
     <tr><td><code>sourceIdentity</code> (if used)</td><td>A name that stays attached to the session, set at assume time</td></tr>
     <tr><td><code>sourceIPAddress</code>, <code>userAgent</code></td><td>Network origin and tool for the <em>assume</em> call</td></tr>
     <tr><td><code>responseElements.credentials.expiration</code></td><td>When the credentials die. Tells you how long you have.</td></tr>
   </table></div>
-  <p>Do not link events by IP address or timestamp alone. Several sessions can share a NAT gateway, and many sessions can start in the same minute. The access key ID is the key.</p>
+  <p>If the key ID is missing from the S3 events, link on the session ID (<code>principalId</code>) and match <code>creationDate</code> to the <code>AssumeRole</code> event time. Do not link events by IP address or timestamp alone. Several sessions can share a NAT gateway, and many sessions can start in the same minute. The access key ID is the key.</p>
+  <p><strong>Two things to know about where the STS events are.</strong> Calls to the global STS endpoint (<code>sts.amazonaws.com</code>) are logged in the <strong>us-east-1</strong> region, while calls to a regional STS endpoint are logged in that region. If you do not see the <code>AssumeRole</code> event where you expect it, check us-east-1 and use a multi-region trail or CloudTrail Lake. Also, CloudTrail does not log <em>denied</em> cross-account <code>AssumeRole</code> requests in the target account, so failed attempts against your role will not appear in Account B.</p>
 
   <h3>Step 3: Work out who called, and what that does and does not prove</h3>
-  <p>The caller's identity shows the source account (Account A) and the principal that assumed the role. For credentials from an EC2 instance profile, the session name is normally the instance ID, so the event may name the instance whose credentials were used. That is a strong lead.</p>
+  <p>In Account B, the caller appears as the source account (Account A) and a principal ID. For a role session, the principal ID normally ends with the session name, and for EC2 instance profile credentials the session name is commonly the instance ID (I did not find this stated in AWS's documentation, so confirm it in your own logs). So it may point to the instance whose credentials were used. Check the real value in your logs, because the full caller ARN is only in Account A's own CloudTrail. Treat it as a strong lead, not a conclusion.</p>
   <p>It is still not proof of who acted. Credentials can be copied off an instance and used from anywhere. Compare the <code>sourceIPAddress</code> in the assume call with the instance's known public or NAT address (from Account A):</p>
   <ul>
     <li><strong>It matches:</strong> the activity probably came from or through that network. It could still be an attacker on the instance, or another workload behind the same NAT.</li>
@@ -209,13 +213,13 @@ ORDER BY eventtime;</code></pre>
   <p>Write down the object list, count and bytes read. Legal and privacy teams will need the exact scope, and it is only as good as the logging you confirmed in Step 0.</p>
 
   <h3>Can Account B alone identify the instance or the attacker?</h3>
-  <p><strong>Partly.</strong> Account B can tell you the calling account, the calling role, usually the session name (often the instance ID), the source IP and the tool. It cannot tell you what ran on the instance, who the attacker is, or how they got the credentials. For that you need Account A: its CloudTrail, GuardDuty findings, VPC flow logs, EC2 inventory and logs from the host itself.</p>
+  <p><strong>Partly.</strong> Account B can tell you the calling account, a principal ID that may include the session name (often the instance ID), the source IP and the tool. It cannot tell you what ran on the instance, who the attacker is, or how they got the credentials. For that you need Account A: its CloudTrail, GuardDuty findings, VPC flow logs, EC2 inventory and logs from the host itself.</p>
 
   <h2>4. Containment: stop it without an outage</h2>
   <p>The credentials still have 45 minutes left and five legitimate services use the same role. First, the facts that decide what works.</p>
 
   <h3>Changing the trust policy does not stop existing sessions</h3>
-  <p>The trust policy controls <em>who can assume</em> the role. Tightening it blocks new assumptions only. Credentials already issued keep working until they expire (an hour by default, up to the role's maximum session duration). Tightening the trust policy is worth doing to stop the attacker getting fresh credentials, but it does nothing about the session they already hold.</p>
+  <p>The trust policy controls <em>who can assume</em> the role. Tightening it blocks new assumptions only. Credentials already issued keep working until they expire. That is 1 hour by default, up to 12 hours if the role's maximum session duration allows, and role chaining caps a session at 1 hour. In this scenario an instance role is calling <code>AssumeRole</code>, which is role chaining, so the session in Account B lasts at most 1 hour. Tightening the trust policy is worth doing to stop the attacker getting fresh credentials, but it does nothing about the session they already hold.</p>
 
   <h3>Your options</h3>
   <div class="tbl"><table>
@@ -238,7 +242,9 @@ ORDER BY eventtime;</code></pre>
     "StringLike": { "aws:userid": "AROAEXAMPLEROLEID:suspicious-session-name" }
   }
 }</code></pre>
-  <p>This only works if the attribute is genuinely unique. The caller chooses the session name. If legitimate services use the same name (for example a default like <code>app</code>), a deny on it would cut them off as well. Check the real values in CloudTrail before relying on this.</p>
+  <p>This only works if the attribute is genuinely unique. The caller chooses the session name, and it can change when roles are chained. If legitimate services use the same name (for example a default like <code>app</code>), a deny on it would cut them off as well. Check the real values in CloudTrail before relying on this.</p>
+  <p><strong>Tip:</strong> the exact value to deny is already in your evidence. Copy <code>userIdentity.principalId</code> from the suspicious S3 event. It has the form <code>AROA...:session-name</code>, where <code>AROA...</code> is the role's unique ID, not its name. It also appears as <code>assumedRoleUser.assumedRoleId</code> in the <code>AssumeRole</code> event. You can look up the role ID with <code>aws iam get-role --role-name ProductionDataReader --query Role.RoleId</code>.</p>
+  <p><strong>This does not stop the attacker from getting a new session.</strong> The caller chooses the session name (2 to 64 characters). If they still hold valid credentials for the calling role, they can assume the role again under a different name, and this deny will not match. Pair it with a change to the role's trust policy that blocks the compromised caller, and with isolating the host (section 5).</p>
 
   <h3>Option 2: Deny everything issued before a cutoff</h3>
   <p>If you cannot isolate the session, deny all sessions issued before a chosen time. The condition key <code>aws:TokenIssueTime</code> records when the temporary credentials were created.</p>
@@ -274,18 +280,20 @@ ORDER BY eventtime;</code></pre>
     <tr><td>Service A</td><td>17:45</td><td>Denied. Issued before the cutoff, even though it is legitimate.</td></tr>
     <tr><td>Service B</td><td>18:15</td><td>Not affected by this statement. It still needs permission from the rest of the policies.</td></tr>
   </table></div>
-  <p>Two limits you must state out loud:</p>
+  <p>Three limits you must state out loud:</p>
   <ul>
-    <li><strong>Scope.</strong> The example above denies only <code>s3:GetObject</code> on one bucket. The attacker's credentials can still call DynamoDB, other buckets or other APIs the role allows. During an active incident, widen it to <code>"Action": "*"</code> for old sessions, or review what else the role can do. The IAM console's "Revoke active sessions" button does the wide version by attaching a deny policy for sessions issued before now.</li>
+    <li><strong>Scope.</strong> The example above denies only <code>s3:GetObject</code> on one bucket. The attacker's credentials can still call DynamoDB, other buckets or other APIs the role allows. During an active incident, widen it to <code>"Action": "*"</code> for old sessions, or review what else the role can do. The IAM console's "Revoke active sessions" button does the wide version: it attaches an inline deny-all policy named <code>AWSRevokeOlderSessions</code> to the role, with a cutoff about 30 seconds in the future to allow for propagation, and it applies to every user of the role.</li>
     <li><strong>Collateral.</strong> Every legitimate session issued before the cutoff is blocked until it gets new credentials. Whether that is an outage depends on how each service refreshes.</li>
+    <li><strong>New sessions.</strong> The cutoff only covers sessions issued before it. If the attacker still holds the caller's credentials, they can assume the role again after the cutoff and receive a session that is not denied. Also add a deny for the compromised caller to the role's trust policy, and isolate the host. Also, the cutoff only affects temporary credentials, because <code>aws:TokenIssueTime</code> is absent from requests signed with long-term access keys. It will not stop an IAM user key the attacker may have created.</li>
   </ul>
+  <p><strong>Use an explicit deny, not just a removal of permissions.</strong> If a bucket policy also allows the role, removing the role's own permissions does not stop access. An explicit deny wins over any allow.</p>
 
   <h3>The safe order for the legitimate services</h3>
   <ol>
     <li>List the workloads that use the role and how each gets its credentials.</li>
-    <li>Have them obtain fresh sessions after the cutoff: through their normal credential refresh, or a controlled restart where needed.</li>
+    <li>Have them obtain fresh sessions after the cutoff: through their normal credential refresh, or a controlled restart where needed. People using the AWS CLI may need to clear its credential cache (<code>~/.aws/cli/cache</code>).</li>
     <li>Verify in CloudTrail that new <code>AssumeRole</code> events appeared with creation times after the cutoff, and check application health.</li>
-    <li>Apply the deny. IAM changes are eventually consistent, so allow a short time for them to take effect.</li>
+    <li>Apply the deny. AWS says policy updates can take a few minutes to take effect, so do not assume it is instant.</li>
     <li>Confirm the attacker's access key now gets <code>AccessDenied</code> in CloudTrail and the services are still healthy.</li>
   </ol>
   <div class="box"><p><strong>If data is leaving right now, containment comes first.</strong> Apply the deny, or restrict the bucket, immediately, and accept a short, planned disruption. Agree this with the incident commander and the service owners. A disruption-free rollout is not worth more confidential data being downloaded.</p></div>
@@ -308,20 +316,20 @@ ORDER BY eventtime;</code></pre>
   <p>You cannot see Account A, but you can ask its owners to act:</p>
   <ul>
     <li><strong>Isolate the instance.</strong> Swap its security group for one with no outbound access. Do not terminate it, because you need its disk and memory for forensics. Snapshot its volumes.</li>
-    <li><strong>Revoke the role's sessions in Account A only after isolating the host.</strong> A running instance fetches fresh credentials from its metadata service. If the attacker is still on the host, revoking first just hands them new credentials.</li>
-    <li><strong>Find the way in.</strong> Common causes are a web flaw that reaches the instance metadata service (SSRF), remote code execution, or a leaked key. Fix that cause.</li>
+    <li><strong>Revoke the role's sessions in Account A only after isolating the host.</strong> EC2 rotates instance role credentials automatically and makes new ones available at least five minutes before the old ones expire. A revoke denies the credentials issued before its cutoff, but anyone still on the host receives a fresh, valid set at the next rotation. To change quickly what an instance can do, replace its instance profile. AWS advises against simply removing the role from the profile, because that change can take up to an hour to take effect.</li>
+    <li><strong>Find the way in.</strong> Common causes are a web flaw that reaches the instance metadata service (SSRF), remote code execution, or a leaked key. In Account A's CloudTrail, the <code>ec2RoleDelivery</code> field on the instance's calls is <code>1.0</code> when the credentials came from IMDSv1, which is consistent with metadata theft. Fix the cause.</li>
     <li><strong>Rotate every secret</strong> that was on the instance or reachable from it, and check other instances that use the same role.</li>
-    <li>Look for GuardDuty findings about instance credentials being used from another network.</li>
+    <li>Look for the GuardDuty findings <code>UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS</code> (instance credentials used from an IP outside AWS) and <code>.InsideAWS</code> (used from another AWS account). GuardDuty can stop raising these for continued activity from the same remote source, so a quiet GuardDuty does not mean the activity stopped.</li>
   </ul>
 
   <h2>6. Make the next incident easier</h2>
   <ul>
     <li>Turn on S3 data events (or server access logs) for sensitive buckets before you need them.</li>
     <li>Give each service its <strong>own role</strong> and a distinct, meaningful session name. A shared role like <code>ProductionDataReader</code> is what made this containment hard.</li>
-    <li>Require <code>sts:SourceIdentity</code> on cross-account role assumption, so sessions carry a name that cannot be changed later.</li>
+    <li>Require <code>sts:SourceIdentity</code> on cross-account role assumption, so sessions carry a name that cannot be changed later. Use <code>sts:RoleSessionName</code> to require a meaningful session name too.</li>
     <li>Restrict the trust policy to specific principals and your organization (<code>aws:PrincipalOrgID</code>).</li>
     <li>Keep session durations short.</li>
-    <li>Require IMDSv2 on instances, with a hop limit of 1, to make metadata credential theft harder.</li>
+    <li>Require IMDSv2 on instances to make metadata credential theft harder. A hop limit of 1 keeps the token response on the instance, but it can break containers, so test first. The <code>ec2:RoleDelivery</code> condition key can enforce it in policies, and CloudTrail's <code>ec2RoleDelivery</code> field shows whether a session's credentials came from IMDSv1 or IMDSv2.</li>
     <li>On sensitive buckets, require access through a VPC endpoint and named roles.</li>
     <li>Alert on <code>AssumeRole</code> from unusual IPs or tools, and on unusual download volume.</li>
     <li>Send CloudTrail to a separate log archive account with log file validation enabled.</li>
@@ -349,6 +357,7 @@ ORDER BY eventtime;</code></pre>
     <li>Say clearly what the logs prove, what they suggest, and what is unknown.</li>
     <li>Changing a trust policy does not end sessions already issued.</li>
     <li>Use a targeted deny only when an attribute is truly unique. Otherwise use a cutoff deny with <code>aws:TokenIssueTime</code>, and know its scope and collateral damage.</li>
+    <li>Neither deny stops the attacker from assuming the role again, so also block the compromised caller and isolate the source.</li>
     <li>If data is actively leaving, stop it first and coordinate the disruption.</li>
     <li>Contain the source in Account A, but isolate the host before revoking its role.</li>
   </ul>
@@ -356,9 +365,12 @@ ORDER BY eventtime;</code></pre>
   <h2>References</h2>
   <ul>
     <li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html" target="_blank" rel="noopener">AWS docs: Revoking IAM role temporary security credentials</a></li>
+    <li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html" target="_blank" rel="noopener">AWS docs: Logging IAM and AWS STS API calls with CloudTrail</a></li>
+    <li><a href="https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html" target="_blank" rel="noopener">AWS STS API reference: AssumeRole</a></li>
     <li><a href="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-user-identity.html" target="_blank" rel="noopener">AWS docs: CloudTrail userIdentity element</a></li>
     <li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html" target="_blank" rel="noopener">AWS docs: Global condition context keys</a></li>
-    <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/what-is-guardduty.html" target="_blank" rel="noopener">Amazon GuardDuty documentation</a></li>
+    <li><a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_finding-types-iam.html" target="_blank" rel="noopener">Amazon GuardDuty: IAM finding types</a></li>
+    <li><a href="https://docs.aws.amazon.com/athena/latest/ug/cloudtrail-logs.html" target="_blank" rel="noopener">Amazon Athena: Query AWS CloudTrail logs</a></li>
   </ul>
 
   <footer>
