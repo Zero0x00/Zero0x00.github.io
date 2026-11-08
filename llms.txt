@@ -19,6 +19,30 @@
 - [SQL Injection in Practice: Values, Column Names, Stored Data and Stored Procedures](https://mohdarif.com/notes/web-security/sql-injection-values-identifiers.html): SQL injection beyond the basics: why placeholders work for values but not column names, how second-order injection works, and why stored procedures are not automatically safe.
 - [S3 Presigned URLs: Why Revoking Access Doesn't Stop the Download](https://mohdarif.com/notes/aws-security/s3-presigned-url-revocation.html): Why a presigned S3 URL keeps working after you revoke a user's access, how to contain one document right now, and how to design for fast, per-user revocation.
 
+## AI and LLM notes
+- [How LLM Systems Work, With Security Risks and Controls at Every Layer](https://mohdarif.com/notes/LLM/llm-security-starter.html): How modern LLM systems work layer by layer, what can go wrong at each layer, and which security controls reduce the risk.
+- [Attention Is All You Need: Beginner Guide to Transformer Attention](https://mohdarif.com/notes/LLM/attention_is_all_you_need.html): Visual beginner notes on the Transformer paper: embeddings, positional encoding, self-attention, multi-head attention, the encoder and decoder, and the full Transformer flow.
+- [OpenAI Prompting and Embeddings: Beginner Guide](https://mohdarif.com/notes/LLM/openai_prompting_embeddings.html): Beginner notes on prompting (a good prompt formula, few-shot examples, output control) and on text embeddings (similar meaning is closer in vector space, and how embeddings power search and RAG).
+
+## AI agent security: prompt injection through GitHub and MCP (a four-page scenario)
+These four pages walk through one scenario: an AI agent connected to GitHub through MCP (Model Context Protocol) reads a malicious public issue and leaks private repository code.
+- [GitHub AI Agent Security: Prompt Injection in Dev Workflows](https://mohdarif.com/notes/MCP/github_mcp_issue.html): Overview and entry point: how prompt injection can lead an AI agent with repository access to expose private code, and which design choices make such a system vulnerable or secure.
+- [GitHub AI Agent Attack Flow: Public Issue to Private Code](https://mohdarif.com/notes/MCP/attack-flow.html): The attack step by step: the attacker plants hidden instructions in a public issue, the victim asks the agent an ordinary question, and the agent follows the hidden instructions and posts private code.
+- [GitHub AI Agent Vulnerability: Security Risks and Impact](https://mohdarif.com/notes/MCP/risk-impact.html): The impact of the scenario: private code exposure, business data theft, credential compromise, loss of trust, supply chain attacks, compliance violations and how the attack scales.
+- [Exploitable vs Non-Exploitable: GitHub AI Agent Issue](https://mohdarif.com/notes/MCP/security-comparison.html): The conditions that make the scenario exploitable (public issues as untrusted input, MCP access without sanitization, "Always Allow" tool mode, cross-repository access) and the controls that make it non-exploitable.
+
+## Web security interactive notes
+- [OAuth 2.0 and OIDC Threat Model: Where Login Flows Break](https://mohdarif.com/notes/web-security/OAuth-threat_model.html): An interactive threat model that maps OAuth 2.0 and OpenID Connect authorization bugs to the lifecycle stage where each control belongs.
+- [PKCE Explained Interactively: Stopping Authorization Code Theft](https://mohdarif.com/notes/web-security/PKCE.html): How the OAuth PKCE extension stops a stolen authorization code from being redeemed by an attacker, explained interactively.
+
+## AWS Certified Security Specialty (SCS-C03) study guides
+- [AWS Security Specialty (SCS-C03) Domain 1: Detection](https://mohdarif.com/notes/aws-security/detection.html): A visual study sheet for Domain 1 (Detection): GuardDuty, Security Hub, Detective, CloudTrail and Insights, EventBridge, CloudWatch, Macie, Inspector, VPC Flow Logs, Route 53 Resolver query logs and Athena, with exam traps and quick-recall workflows.
+- [Amazon GuardDuty Study Guide for the AWS Security Specialty](https://mohdarif.com/notes/aws-security/detection/guardduty_study_guide.html): An interactive study guide to Amazon GuardDuty: what it sees, what each protection plan adds, how finding severity works, and Extended Threat Detection.
+- [AWS Security Hub Study Guide (SCS-C03)](https://mohdarif.com/notes/aws-security/detection/securityhub-study-guide.html): A study guide to AWS Security Hub: architecture, the ASFF finding format, workflow status and severity, compliance standards and the security score, cross-Region aggregation, automation, integrations, pricing and limits, with the top 10 exam traps and flashcards.
+
+## Other
+- [Python 3.11 Data Structures and Algorithms Cheat Sheet](https://mohdarif.com/notes/python_cheatsheet.html): An interactive Python 3.11 cheat sheet for the syntax used in data structures and algorithms: lists, strings, dictionaries and sets, deques, heaps and pattern matching, with time complexity notes.
+
 ## Profiles
 - [LinkedIn](https://www.linkedin.com/in/mohd--arif/)
 - [GitHub](https://github.com/Zero0x00)
