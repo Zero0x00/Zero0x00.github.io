@@ -15,6 +15,9 @@
 - [Threat Modeling a Multi-Tenant AI Document Platform](https://mohdarif.com/notes/LLM/threat-model-ai-document-platform.html): A worked threat model for a multi-tenant AI document analysis platform on AWS: trust boundaries, attack paths, controls, launch priorities and how to test them.
 - [Investigating and Containing Compromised AWS STS Credentials Across Accounts](https://mohdarif.com/notes/aws-security/cross-account-sts-incident-response.html): A worked AWS incident response: trace a bulk S3 download to an STS session using only one account's CloudTrail, then contain it without taking down the services that share the role.
 - [SSRF on AWS: From a URL Parameter to Instance Credentials](https://mohdarif.com/notes/web-security/ssrf-aws-metadata-credentials.html): How an image-download feature on EC2 can leak AWS credentials, why three common fixes fail, and what a safe design looks like.
+- [Broken Access Control in a Document API: From IDOR to Enterprise Sharing](https://mohdarif.com/notes/web-security/broken-access-control-idor.html): Why a valid JWT is not enough to read a document, why checking the tenant is not enough either, and how to design and test object-level authorization.
+- [SQL Injection in Practice: Values, Column Names, Stored Data and Stored Procedures](https://mohdarif.com/notes/web-security/sql-injection-values-identifiers.html): SQL injection beyond the basics: why placeholders work for values but not column names, how second-order injection works, and why stored procedures are not automatically safe.
+- [S3 Presigned URLs: Why Revoking Access Doesn't Stop the Download](https://mohdarif.com/notes/aws-security/s3-presigned-url-revocation.html): Why a presigned S3 URL keeps working after you revoke a user's access, how to contain one document right now, and how to design for fast, per-user revocation.
 
 ## Profiles
 - [LinkedIn](https://www.linkedin.com/in/mohd--arif/)

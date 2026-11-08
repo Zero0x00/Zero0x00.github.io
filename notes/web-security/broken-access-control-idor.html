@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Broken Access Control in a Document API: From IDOR to Enterprise Sharing | Mohammad Arif</title>
+  <meta name="description" content="Why a valid JWT is not enough to read a document, why checking the tenant is not enough either, and how to design and test object-level authorization." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/web-security/broken-access-control-idor.html" />
+  <meta property="og:title" content="Broken Access Control in a Document API: From IDOR to Enterprise Sharing" />
+  <meta property="og:description" content="Why a valid JWT is not enough to read a document, why checking the tenant is not enough either, and how to design and test object-level authorization." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .tag { display:inline-block; font-size:.7rem; font-weight:800; letter-spacing:.06em; padding:1px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; border:1px solid var(--line); color:var(--muted); }
+    .tag.crit { color:#fb7185; border-color:#fb7185; } .tag.high { color:#fbbf24; border-color:#fbbf24; } .tag.med { color:#7dd3fc; border-color:#7dd3fc; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+  <meta property="article:published_time" content="2026-11-08" />
+  <meta property="article:modified_time" content="2026-11-08" />
+  <meta property="article:author" content="https://mohdarif.com/" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Broken Access Control in a Document API: From IDOR to Enterprise Sharing",
+  "description": "Why a valid JWT is not enough to read a document, why checking the tenant is not enough either, and how to design and test object-level authorization.",
+  "url": "https://mohdarif.com/notes/web-security/broken-access-control-idor.html",
+  "mainEntityOfPage": "https://mohdarif.com/notes/web-security/broken-access-control-idor.html",
+  "datePublished": "2026-11-08",
+  "dateModified": "2026-11-08",
+  "inLanguage": "en-US",
+  "image": "https://mohdarif.com/og-image.png",
+  "author": {
+    "@type": "Person",
+    "@id": "https://mohdarif.com/#person",
+    "name": "Mohammad Arif",
+    "url": "https://mohdarif.com/"
+  },
+  "publisher": {
+    "@id": "https://mohdarif.com/#person"
+  },
+  "isPartOf": {
+    "@id": "https://mohdarif.com/notes/#blog"
+  },
+  "articleSection": "Web & API security",
+  "keywords": [
+    "broken access control",
+    "IDOR",
+    "BOLA",
+    "object-level authorization",
+    "multi-tenant authorization",
+    "RBAC",
+    "ABAC",
+    "ReBAC",
+    "API security",
+    "application security"
+  ]
+}
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a> · <a class="back" href="/notes/">All notes</a>
+
+  <header>
+    <div class="eyebrow">Web Security · Authorization</div>
+    <h1>Broken Access Control in a Document API: From IDOR to Enterprise Sharing</h1>
+    <p class="sub">A user changes one number in a URL and reads someone else's document. This post explains why it happens, why two common fixes fall short, and what a complete fix looks like.</p>
+    <div class="byline">By Mohammad Arif · 12 min read</div>
+  </header>
+
+  <p>This post is for developers and security engineers who already know what a JWT is (the <a href="jwt-security.html">JWT post</a> covers it) and want to understand why "the token is valid" does not mean "the request is allowed". You do not need any authorization background. By the end you should be able to spot this bug in code, explain it to a teammate, design a fix that works for a real multi-tenant product, and test it.</p>
+
+  <h2>1. Two words to get straight first</h2>
+  <p><strong>Authentication</strong> answers "who are you?". A valid login or a valid JWT proves it.</p>
+  <p><strong>Authorization</strong> answers "are you allowed to do this, to this thing?". Nothing about a login can answer that, because the answer depends on the thing.</p>
+  <p>Think of a hotel key card. It proves you are a guest (authentication). It does not tell the door to room 214 whether <em>you</em> may open it. The door has to check that separately, every time. Most access control bugs are doors that only check "is this a real key card?".</p>
+  <p>A few more terms we will use:</p>
+  <ul>
+    <li><strong>Principal:</strong> the user or service making the request.</li>
+    <li><strong>Resource (or object):</strong> the thing being accessed, such as one document.</li>
+    <li><strong>Tenant:</strong> one customer organization in a product that serves many. Documents from different tenants must never mix.</li>
+  </ul>
+
+  <h2>2. The bug</h2>
+  <p>Here is a small document API:</p>
+<pre><code>@app.get("/api/v1/documents/{document_id}")
+def get_document(document_id: int, jwt: str):
+    user = validate_jwt(jwt)          # signature, expiry, issuer, audience: all correct
+    if not user:
+        raise Unauthorized()
+    document = database.get_document(document_id)
+    return document</code></pre>
+  <p>The developer says: "We validate the signature, expiry, issuer and audience. The token handling is correct." That is true, and it is not the problem.</p>
+  <p>Alice is user 7 and Bob is user 9. Alice owns document 101 and Bob owns document 102. Alice is logged in and sends:</p>
+<pre><code>GET /api/v1/documents/102
+Authorization: Bearer &lt;Alice's valid token&gt;</code></pre>
+  <p>The API checks the token (valid), loads document 102, and returns Bob's document to Alice.</p>
+
+  <figure><svg viewBox="0 0 760 245" role="img" aria-label="Alice sends a valid token and asks for document 102. The API validates the token, loads the document and returns it. The check for whether Alice may read document 102 is missing."><defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect class="n" x="20" y="40" width="150" height="90" rx="10"/><text x="95" y="66" text-anchor="middle" class="t-b">Alice (user 7)</text><text x="95" y="86" text-anchor="middle" class="t-s">valid token</text><text x="95" y="104" text-anchor="middle" class="t-s">asks for document 102</text><rect class="hl" x="230" y="30" width="230" height="110" rx="10"/><text x="345" y="56" text-anchor="middle" class="t-b">Documents API</text><text x="345" y="80" text-anchor="middle" class="t-s">1. Is the token valid? Yes</text><text x="345" y="98" text-anchor="middle" class="t-s">2. Load document 102</text><text x="345" y="116" text-anchor="middle" class="t-s">3. Return it</text><rect class="n" x="520" y="40" width="210" height="90" rx="10"/><text x="625" y="66" text-anchor="middle" class="t-b">Database</text><text x="625" y="86" text-anchor="middle" class="t-s">document 102</text><text x="625" y="104" text-anchor="middle" class="t-s">owner: Bob (user 9)</text><path class="ln" d="M170 85H230" marker-end="url(#a1)"/><path class="ln" d="M460 85H520" marker-end="url(#a1)"/><rect class="risk" x="195" y="175" width="300" height="58" rx="10"/><text x="345" y="198" text-anchor="middle" class="t-b">Missing step</text><text x="345" y="217" text-anchor="middle" class="t-s">Is user 7 allowed to read document 102?</text><path class="ln" style="stroke:#fb7185" d="M345 175V142" marker-end="url(#a1)"/></svg><figcaption>Figure 1. The token check passes, so the API never asks whether this user may read this document.</figcaption></figure>
+
+  <p>This bug has two common names:</p>
+  <ul>
+    <li><strong>IDOR</strong> (insecure direct object reference): the user points directly at an object by its ID and the server hands it over.</li>
+    <li><strong>BOLA</strong> (broken object level authorization): the name OWASP uses in its API Security Top 10, where it is the number one risk.</li>
+  </ul>
+  <p>They mean the same thing here. The attacker controls the <code>document_id</code> (in the path, the query string, the body or a header, it does not matter where) and the server never checks that this user may access that object.</p>
+
+  <div class="box"><p><strong>Conditions for the attack:</strong> (1) the attacker has any valid account, (2) the ID is something they can change, (3) the server loads the object by ID without checking the requester's right to it. Condition 3 is the actual bug. The other two are almost always true.</p></div>
+
+  <h2>3. First fix: check the owner</h2>
+  <p>The simplest fix is to compare the owner with the user from the token:</p>
+<pre><code>document = database.get_document(document_id)
+if document is None:
+    raise NotFound()
+if document.owner_id != user.id:
+    raise Forbidden()
+return document</code></pre>
+  <p>For an app where every document has exactly one owner and nobody shares anything, this is a complete fix. Real products are rarely that simple, but it shows the shape: <strong>load the object, then ask whether this user may do this action on it.</strong></p>
+
+  <h3>Which error code?</h3>
+  <p>People often return "unauthorized" for everything. The codes mean different things:</p>
+  <ul>
+    <li><code>401 Unauthorized</code>: the request has no valid credentials. (The name is misleading. It really means "not authenticated".)</li>
+    <li><code>403 Forbidden</code>: you are logged in, but you are not allowed.</li>
+    <li><code>404 Not Found</code>: sometimes chosen on purpose so an outsider cannot tell whether a document exists. HTTP allows this for resources you want to hide.</li>
+  </ul>
+  <p>For a logged-in user asking for someone else's document, return 403, or 404 if you do not want to confirm the document exists.</p>
+
+  <h3>"But our IDs are random UUIDs"</h3>
+  <p>Random IDs make it harder to <em>guess</em> another document. They do not stop access. IDs leak through links, emails, logs and browser history, and a person who is given an ID once can keep using it. OWASP recommends unpredictable IDs <em>and</em> an authorization check. Use random IDs as a bonus, never as the check.</p>
+
+  <h2>4. A fix that looks right but is not: check the tenant</h2>
+  <p>Now the product grows. It serves many companies (tenants), and a manager proposes this fix:</p>
+<pre><code>document = database.get_document(document_id)
+if document.tenant_id != current_user.tenant_id:
+    raise Forbidden()
+return document</code></pre>
+  <p>"Users can no longer read other tenants' documents, so IDOR is fixed." Is it? Take one tenant, Tenant A, with three users:</p>
+  <div class="tbl"><table>
+    <tr><th>User</th><th>Relationship to document 8271</th><th>Should be</th><th>Tenant check says</th></tr>
+    <tr><td>Alice</td><td>Owner</td><td>Allow</td><td>Allow</td></tr>
+    <tr><td>Bob</td><td>Document shared with him</td><td>Allow</td><td>Allow</td></tr>
+    <tr><td>Charlie</td><td>Same company, no access</td><td><strong>Deny</strong></td><td><strong>Allow</strong></td></tr>
+  </table></div>
+  <p>Charlie works at the same company, so the tenant check lets him in. That is a real bug: an HR file or a board document is not meant for everyone in the company.</p>
+  <p>There is a second problem in the other direction. Suppose the customer shares one document with an outside contractor who belongs to Tenant B. A strict tenant check blocks that legitimate request, so the product breaks for a valid use case.</p>
+  <p>The tenant check is useful, but it answers a different question ("is this the right company?") from the one we need ("may this person do this to this document?").</p>
+
+  <h2>5. What a complete rule looks like</h2>
+  <p>A good authorization decision uses five inputs:</p>
+  <ol>
+    <li><strong>Who</strong> is asking (the principal, taken from the verified token, never from the request).</li>
+    <li><strong>What action</strong> they want (read, edit, share, delete).</li>
+    <li><strong>Which resource</strong>, loaded from your own data.</li>
+    <li><strong>Which tenant</strong> the resource belongs to.</li>
+    <li><strong>What grants exist</strong>: ownership, direct shares, team shares, admin rights, guest access.</li>
+  </ol>
+<pre><code>principal = validate_jwt(jwt)
+document = database.get_document(document_id)
+if document is None:
+    raise NotFound()
+if not authorization.can_access(principal, "document:read", document):
+    raise Forbidden()          # or NotFound, if you want to hide existence
+return document</code></pre>
+  <p>The interesting part is what happens inside <code>can_access</code>. There are three common ways to model it, and real systems often mix them:</p>
+  <div class="tbl"><table>
+    <tr><th>Model</th><th>Idea</th><th>Example</th><th>Where it falls short alone</th></tr>
+    <tr><td><strong>RBAC</strong> (role-based)</td><td>Permissions come from a role</td><td>"Editors can edit documents"</td><td>A role says <em>what</em> you can do, not <em>which</em> documents</td></tr>
+    <tr><td><strong>ABAC</strong> (attribute-based)</td><td>Rules compare attributes of the user and the resource</td><td>"Same tenant and same project and not marked confidential"</td><td>Awkward for "share this one file with Bob"</td></tr>
+    <tr><td><strong>ReBAC</strong> (relationship-based)</td><td>Access follows relationships</td><td>"Owner of the document", "member of a team that was given access"</td><td>Needs the relationships to be stored and kept correct</td></tr>
+  </table></div>
+  <p>For a document platform I would combine them: the tenant boundary (attribute), a role for what actions are possible (RBAC), and explicit grants on each document (relationship).</p>
+
+  <h3>How grants might look</h3>
+<pre><code>Document 8271, owner tenant: Tenant A
+
+Grants:
+  Alice               owner
+  Team "Finance"      reader
+  Bob                 reader
+  Guest from Tenant B reader, expires 30 November</code></pre>
+  <p>Then the rule for each user is simple to say out loud: Alice owns it, Bob and the Finance team have been given read access, and the guest has read access until the end of November. Charlie is on none of those lines, so he is denied. Two rules matter here:</p>
+  <ul>
+    <li><strong>Cross-tenant access must be an explicit grant.</strong> Scoped to one document and one action, with an expiry, and revocable. Do not loosen the tenant boundary for everyone to make one share work.</li>
+    <li><strong>Admin does not automatically mean "sees everything".</strong> An organization admin may manage users without being able to read every private document. If admins should read everything, make that an explicit business rule.</li>
+  </ul>
+
+  <h2>6. Where to enforce it</h2>
+  <p>There are four places people try. Each one is good at something and not enough alone:</p>
+  <div class="tbl"><table>
+    <tr><th>Place</th><th>Good at</th><th>Not enough because</th></tr>
+    <tr><td>API gateway</td><td>Is the token valid? Is this route allowed for this kind of caller? Rate limits.</td><td>It does not know that document 102 belongs to Bob.</td></tr>
+    <tr><td>Application service</td><td>Knows the user, the action and the loaded object. The right place for the decision.</td><td>Every endpoint and background job has to remember to call it.</td></tr>
+    <tr><td>Database</td><td>Tenant filters in queries, or row-level security, as a safety net.</td><td>Hard to express sharing rules and guest access there.</td></tr>
+    <tr><td>Central policy service</td><td>One place to write and audit the rules.</td><td>Useless unless every code path actually asks it.</td></tr>
+  </table></div>
+  <p>The rule I use: <strong>the decision can be central, but the enforcement must happen at every place that returns or changes data.</strong> That includes list endpoints, search, exports, background jobs and any AI feature that reads documents on a user's behalf.</p>
+  <p>As a second layer, scope the query itself so an unauthorized row is never loaded by mistake:</p>
+<pre><code>SELECT * FROM documents WHERE id = :id AND tenant_id = :tenant_id</code></pre>
+  <p>Guests are the exception, because their access comes from a grant rather than their own tenant. Give them their own explicit path instead of removing the filter for everyone.</p>
+
+  <h2>7. How to test it</h2>
+  <p>Create a small set of test users and test each pair, not just the happy path.</p>
+  <ul class="check">
+    <li><strong>Owner:</strong> can read, edit, share and delete their own document.</li>
+    <li><strong>Direct share:</strong> a user with read access can read but cannot edit, share or delete.</li>
+    <li><strong>Team share:</strong> a team member can read. Remove them from the team and re-test. Access should end.</li>
+    <li><strong>Same tenant, no grant:</strong> must be denied (this is the Charlie test).</li>
+    <li><strong>Different tenant, no grant:</strong> must be denied.</li>
+    <li><strong>Guest:</strong> can read the one shared document, nothing else in that tenant, and not after the grant expires.</li>
+    <li><strong>Vertical escalation:</strong> a normal reader tries admin-only actions: share, change the owner, delete. Each should be denied.</li>
+    <li><strong>Revocation:</strong> share with Bob, then revoke. Bob must lose access immediately, including through an old link, a cached decision or a download link already issued. (Download links are a topic of their own, covered in the <a href="../aws-security/s3-presigned-url-revocation.html">presigned URL post</a>.)</li>
+    <li><strong>Every method and every path:</strong> repeat the tests on <code>PUT</code>, <code>DELETE</code>, list and search endpoints, and on IDs sent in the body or headers.</li>
+  </ul>
+  <p>Automate these. OWASP's advice is to write authorization tests and not to deploy changes that fail them, because this class of bug comes back every time someone adds a new endpoint.</p>
+
+  <h2>8. Things that sound safe but are not</h2>
+  <ul>
+    <li><strong>"The JWT is valid."</strong> That is authentication. It says nothing about this document.</li>
+    <li><strong>"The ID is a random UUID."</strong> It is harder to guess, not protected.</li>
+    <li><strong>"The button is hidden in the UI."</strong> Attackers send requests directly.</li>
+    <li><strong>"It is an internal API."</strong> Any logged-in employee, contractor or stolen session can call it.</li>
+    <li><strong>"We check the tenant."</strong> That stops other companies, not other people in the same company, and it breaks legitimate sharing.</li>
+    <li><strong>"Authorization is in the controller."</strong> Fine, until a new endpoint or background job skips the controller.</li>
+  </ul>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>Authentication proves who you are. Authorization decides what you may do to a specific object. A valid token only gives you the first.</li>
+    <li>IDOR / BOLA happens when the server loads an object by an ID the user controls and never checks the user's right to it.</li>
+    <li>A tenant check is a boundary, not an authorization decision. Decide using the principal, the action, the resource, the tenant and the grants.</li>
+    <li>Share across tenants with explicit, scoped, revocable grants, not by loosening isolation.</li>
+    <li>Decide centrally if you like, but enforce everywhere data is returned, and test owner, share, guest, escalation and revocation cases.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization" target="_blank" rel="noopener">OWASP API Security Top 10 (2023): API1 Broken Object Level Authorization</a></li>
+    <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP: Authorization Cheat Sheet</a></li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-403-forbidden" target="_blank" rel="noopener">RFC 9110: 403 Forbidden (and hiding a resource with 404)</a></li>
+  </ul>
+
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Examples are simplified. Library behavior and AWS defaults change, so check current documentation and test on your own versions.
+    More notes: <a href="jwt-security.html">JWT security</a> · <a href="sql-injection-values-identifiers.html">SQL injection</a> · <a href="../aws-security/s3-presigned-url-revocation.html">S3 presigned URLs and revocation</a>
+  </footer>
+</div>
+</body>
+</html>

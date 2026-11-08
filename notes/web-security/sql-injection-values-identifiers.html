@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SQL Injection in Practice: Values, Column Names, Stored Data and Stored Procedures | Mohammad Arif</title>
+  <meta name="description" content="SQL injection beyond the basics: why placeholders work for values but not column names, how second-order injection works, and why stored procedures are not automatically safe." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/web-security/sql-injection-values-identifiers.html" />
+  <meta property="og:title" content="SQL Injection in Practice: Values, Column Names, Stored Data and Stored Procedures" />
+  <meta property="og:description" content="SQL injection beyond the basics: why placeholders work for values but not column names, how second-order injection works, and why stored procedures are not automatically safe." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .tag { display:inline-block; font-size:.7rem; font-weight:800; letter-spacing:.06em; padding:1px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; border:1px solid var(--line); color:var(--muted); }
+    .tag.crit { color:#fb7185; border-color:#fb7185; } .tag.high { color:#fbbf24; border-color:#fbbf24; } .tag.med { color:#7dd3fc; border-color:#7dd3fc; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+  <meta property="article:published_time" content="2026-11-08" />
+  <meta property="article:modified_time" content="2026-11-08" />
+  <meta property="article:author" content="https://mohdarif.com/" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SQL Injection in Practice: Values, Column Names, Stored Data and Stored Procedures",
+  "description": "SQL injection beyond the basics: why placeholders work for values but not column names, how second-order injection works, and why stored procedures are not automatically safe.",
+  "url": "https://mohdarif.com/notes/web-security/sql-injection-values-identifiers.html",
+  "mainEntityOfPage": "https://mohdarif.com/notes/web-security/sql-injection-values-identifiers.html",
+  "datePublished": "2026-11-08",
+  "dateModified": "2026-11-08",
+  "inLanguage": "en-US",
+  "image": "https://mohdarif.com/og-image.png",
+  "author": {
+    "@type": "Person",
+    "@id": "https://mohdarif.com/#person",
+    "name": "Mohammad Arif",
+    "url": "https://mohdarif.com/"
+  },
+  "publisher": {
+    "@id": "https://mohdarif.com/#person"
+  },
+  "isPartOf": {
+    "@id": "https://mohdarif.com/notes/#blog"
+  },
+  "articleSection": "Web & API security",
+  "keywords": [
+    "SQL injection",
+    "parameterized queries",
+    "second-order SQL injection",
+    "ORDER BY injection",
+    "PostgreSQL stored procedures",
+    "SECURITY DEFINER",
+    "secure code review",
+    "application security"
+  ]
+}
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a> · <a class="back" href="/notes/">All notes</a>
+
+  <header>
+    <div class="eyebrow">Web Security · Secure Code Review</div>
+    <h1>SQL Injection in Practice: Values, Column Names, Stored Data and Stored Procedures</h1>
+    <p class="sub">Most people learn "use placeholders" and stop there. This post covers the cases where that advice is not enough, with code you can read and test yourself.</p>
+    <div class="byline">By Mohammad Arif · 14 min read</div>
+  </header>
+
+  <p>This post is for developers and reviewers who have heard "use parameterized queries" and want to know what that does and does not cover. We start from the basics and build up. Each section adds one idea that the next one needs: first how injection works, then why values and column names need different fixes, then data that is stored and used later, and finally database functions. The examples use Python and PostgreSQL, but the ideas apply to any language and database.</p>
+
+  <h2>1. How SQL injection works</h2>
+  <p>A <strong>SQL query</strong> is a text command sent to the database. If you build that text by joining strings, user input becomes part of the command:</p>
+<pre><code>query = f"SELECT * FROM employees WHERE department = '{department}'"</code></pre>
+  <p>With a normal value, <code>Finance</code>, the database receives:</p>
+<pre><code>SELECT * FROM employees WHERE department = 'Finance'</code></pre>
+  <p>But the database cannot tell which part of that text is your code and which part came from the user. If the user sends <code>x' OR '1'='1</code>, the database receives:</p>
+<pre><code>SELECT * FROM employees WHERE department = 'x' OR '1'='1'</code></pre>
+  <p>The quote in the input closed the string early, and the rest became SQL. The condition is now always true, so every row comes back. That is <strong>SQL injection</strong>: input that was meant to be data is read as part of the command.</p>
+  <p>The fix idea is to send the command and the data separately, so the database never has to guess. That is what a <strong>parameterized query</strong> (also called a prepared statement) does:</p>
+<pre><code>cursor.execute("SELECT * FROM employees WHERE department = %s", (department,))</code></pre>
+  <p>The <code>%s</code> is a placeholder. The value travels separately and is always treated as a value. The same hostile text now just searches for a department with a strange name and finds nothing.</p>
+
+  <h2>2. The code we will review</h2>
+  <p>Here is a reporting endpoint for an internal analytics tool:</p>
+<pre><code>@app.get("/api/reports")
+def get_report(request):
+    department = request.args.get("department")
+    sort_by = request.args.get("sort_by", "created_at")
+
+    query = f"""
+        SELECT id, employee_name, salary, department
+        FROM employees
+        WHERE department = '{department}'
+        ORDER BY {sort_by}
+    """
+    return database.execute(query)</code></pre>
+  <p>The developer says: "This API is internal and needs SSO. The department comes from a dropdown. We also block words like UNION and DROP." Each of these three claims fails:</p>
+  <ul>
+    <li><strong>SSO only proves who is logged in.</strong> Any employee, or anyone with a stolen session, is logged in. Authentication does not clean input.</li>
+    <li><strong>A dropdown is a user interface, not a control.</strong> The browser sends a normal HTTP request, and anyone can edit it. In this code <code>request.args</code> reads the URL query string (<code>/api/reports?department=Finance&amp;sort_by=salary</code>), which a user can change in the address bar.</li>
+    <li><strong>Keyword blocklists are easy to get around.</strong> SQL has many ways to say the same thing, different capitalization, comments, and alternatives to the blocked word. A blocklist tries to guess what attackers will write. Separating code from data removes the guesswork.</li>
+  </ul>
+
+  <h2>3. Two injection points, two different fixes</h2>
+  <p>This query has two places where input is pasted in, and they are not the same kind of thing.</p>
+  <ul>
+    <li><code>department</code> sits inside quotes and is a <strong>value</strong>. A placeholder can stand in for a value.</li>
+    <li><code>sort_by</code> sits after <code>ORDER BY</code> and is an <strong>identifier</strong>, meaning the name of a column (or a table). It is part of the structure of the query, like a word in a sentence, not a piece of data. A placeholder cannot stand in for it.</li>
+  </ul>
+  <p>Both are vulnerable, but the fixes differ. This is the most common gap in code reviews, so we take them one at a time.</p>
+
+  <h3>Fix for the value: a placeholder</h3>
+<pre><code>cursor.execute(
+    "SELECT id, employee_name, salary, department FROM employees WHERE department = %s",
+    (department,),
+)</code></pre>
+  <p>The value is passed separately, so it cannot change the shape of the query.</p>
+
+  <h3>Fix for the identifier: an allowlist</h3>
+  <p>A user cannot be trusted to name a column, because there is no safe way to quote their text into the structure of the query. Instead, you decide which columns are allowed, and let the user pick from your list:</p>
+<pre><code>ALLOWED_SORT_COLUMNS = {
+    "name": "employee_name",
+    "department": "department",
+    "date": "created_at",
+}
+
+sort_by = request.args.get("sort_by", "date")
+column = ALLOWED_SORT_COLUMNS.get(sort_by)
+if column is None:
+    raise ValueError("Invalid sort column")
+
+query = f"""
+    SELECT id, employee_name, salary, department
+    FROM employees
+    WHERE department = %s
+    ORDER BY {column}
+"""
+cursor.execute(query, (department,))</code></pre>
+  <p>The only text pasted into the SQL is <code>column</code>, which comes from a dictionary you wrote, never from the request. A <code>sort_by</code> that is not in the dictionary is rejected. The same approach works for sort direction: map the user's choice to a literal <code>ASC</code> or <code>DESC</code>.</p>
+  <p>Some libraries can quote identifiers for you, for example <code>psycopg2.sql.Identifier</code>. That is safe from injection, but it will happily sort by <em>any</em> column the user names, including ones you did not mean to expose. An allowlist also decides which columns are allowed, so it is the better default for user-chosen sorting.</p>
+
+  <h2>4. A fix that looks right but breaks the feature</h2>
+  <p>A well-meaning developer sends a pull request that puts placeholders everywhere:</p>
+<pre><code>query = """
+    SELECT id, employee_name, salary, department
+    FROM employees
+    WHERE department = %s
+    ORDER BY %s
+"""
+cursor.execute(query, (department, sort_by))</code></pre>
+  <p>They say: "Both inputs are placeholders, so the query is fully parameterized and SQL injection is fixed." Should you approve it?</p>
+  <p>First, is it still injectable? No. The value is bound as data, so it cannot change the SQL structure. Second, does it work? Also no. A placeholder carries a <em>value</em>. When you pass the text <code>"salary"</code>, you get a text value, not the <code>salary</code> column. What happens next depends on the driver and the database:</p>
+  <ul>
+    <li>If the driver fills in the value on the client (psycopg2 does), the database sees <code>ORDER BY 'salary'</code>. PostgreSQL rejects a plain non-integer constant in <code>ORDER BY</code> with an error. (An integer such as <code>ORDER BY 2</code> means "the second output column", which is a different surprise.)</li>
+    <li>If the value is bound on the server side as a real parameter, the query can run and sort by a constant, which means the sort silently does nothing.</li>
+  </ul>
+  <p>So the fix is safe but the feature is broken, and one of the outcomes is worse than an error because it fails silently. This matters in practice: a security fix that breaks a feature often gets reverted, and the revert goes back to string concatenation. Reject the pull request, explain the value versus identifier difference, and offer the allowlist version from section 3.</p>
+
+  <h2>5. Second-order SQL injection</h2>
+  <p>So far the input went straight from the request into the query. <strong>Second-order injection</strong> is different: the attacker's text is stored first and used later.</p>
+  <p>Say users can name their reports, and the app stores the name safely with placeholders:</p>
+<pre><code>def create_report(name, owner_id):
+    cursor.execute(
+        "INSERT INTO reports (name, owner_id) VALUES (%s, %s)",
+        (name, owner_id),
+    )</code></pre>
+  <p>Days later, a background job reads that name and builds another query:</p>
+<pre><code>def run_saved_report(report_id):
+    cursor.execute("SELECT name FROM reports WHERE id = %s", (report_id,))
+    report_name = cursor.fetchone()[0]
+
+    query = f"""
+        SELECT * FROM analytics
+        WHERE report_name = '{report_name}'
+    """
+    cursor.execute(query)</code></pre>
+  <p>The developer's reasoning: "We used placeholders when saving, and the job only reads from our own database, so it is trusted." That reasoning is the trap.</p>
+
+  <figure><svg viewBox="0 0 760 175" role="img" aria-label="Second-order SQL injection in three steps: the attacker stores a report name containing SQL text using a safe INSERT; the text sits in the database; later a background job pastes the name into a new query and the SQL runs."><defs><marker id="q1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect class="ok" x="20" y="25" width="210" height="115" rx="10"/><text x="125" y="51" text-anchor="middle" class="t-b">1. Store</text><text x="125" y="75" text-anchor="middle" class="t-s">Attacker saves a report</text><text x="125" y="93" text-anchor="middle" class="t-s">with SQL text in its name</text><text x="125" y="115" text-anchor="middle" class="t-s">INSERT uses placeholders: safe</text><rect class="n" x="275" y="25" width="210" height="115" rx="10"/><text x="380" y="51" text-anchor="middle" class="t-b">2. Wait</text><text x="380" y="75" text-anchor="middle" class="t-s">The text sits in the database</text><text x="380" y="93" text-anchor="middle" class="t-s">It looks like any other row</text><rect class="risk" x="530" y="25" width="210" height="115" rx="10"/><text x="635" y="51" text-anchor="middle" class="t-b">3. Use</text><text x="635" y="75" text-anchor="middle" class="t-s">A job reads the name and</text><text x="635" y="93" text-anchor="middle" class="t-s">pastes it into a new query</text><text x="635" y="115" text-anchor="middle" class="t-s">The SQL runs</text><path class="ln" d="M230 82H275" marker-end="url(#q1)"/><path class="ln" d="M485 82H530" marker-end="url(#q1)"/></svg><figcaption>Figure 1. The first query is safe. The second query is where the stored text turns into SQL.</figcaption></figure>
+
+  <p>Data does not become trustworthy because it passed through your database, a queue, a cache or an internal API. What matters is how each query <em>uses</em> it.</p>
+  <p><strong>Do not try to fix this by cleaning the name when it is saved.</strong> A report named <code>Director's Quarterly Report</code> is perfectly valid, and the apostrophe is not an attack. Keep the data as it is, and make sure every query that uses it treats it as a value:</p>
+<pre><code>cursor.execute(
+    "SELECT * FROM analytics WHERE report_name = %s",
+    (report_name,),
+)</code></pre>
+  <p>The stored text can now contain any characters and it stays data.</p>
+
+  <h2>6. Stored procedures are not automatically safe</h2>
+  <p>A <strong>stored procedure</strong> (or database function) is code that runs inside the database. Teams sometimes move queries there and say "the app calls a procedure with a placeholder, so injection is fixed". Look at what the function does with the value:</p>
+<pre><code>CREATE FUNCTION search_employees(p_department TEXT)
+RETURNS SETOF employees AS $$
+DECLARE
+    query TEXT;
+BEGIN
+    query := 'SELECT * FROM employees WHERE department = ''' || p_department || '''';
+    RETURN QUERY EXECUTE query;
+END;
+$$ LANGUAGE plpgsql;</code></pre>
+<pre><code>cursor.execute("SELECT * FROM search_employees(%s)", (department,))</code></pre>
+  <p>The Python call is safe, so the value reaches the function intact. But inside the function, <code>||</code> joins strings together and <code>EXECUTE</code> runs the result as a new query. That is the same string-building mistake from section 1, moved one layer down. Binding the arguments of the <em>call</em> protects the call. It does not protect dynamic SQL built inside the function.</p>
+
+  <h3>Fixing the function</h3>
+  <p>Best: do not use dynamic SQL when you do not need it.</p>
+<pre><code>CREATE FUNCTION search_employees(p_department TEXT)
+RETURNS SETOF employees AS $$
+BEGIN
+    RETURN QUERY
+    SELECT * FROM employees e WHERE e.department = p_department;
+END;
+$$ LANGUAGE plpgsql;</code></pre>
+  <p>If you really need dynamic SQL, pass values with <code>EXECUTE ... USING</code> so they stay values:</p>
+<pre><code>RETURN QUERY EXECUTE
+    'SELECT * FROM employees WHERE department = $1'
+    USING p_department;</code></pre>
+  <p>For a dynamic column or table name inside a function, use PostgreSQL's <code>format()</code> with <code>%I</code>, which quotes an identifier safely (and <code>%L</code> for a literal). Even then, prefer picking from a fixed list.</p>
+
+  <h3>Why <code>SECURITY DEFINER</code> raises the stakes</h3>
+  <p>By default a function runs with the <strong>caller's</strong> database permissions (<code>SECURITY INVOKER</code>). A function declared <code>SECURITY DEFINER</code> runs with the permissions of the <strong>role that owns it</strong>. This is useful when you want to give controlled access to data the caller cannot read directly. It also means that if the function is injectable, the attacker's SQL runs with the owner's permissions, which are often much higher than the app's.</p>
+  <div class="tbl"><table>
+    <tr><th>Mode</th><th>Runs with</th><th>If the function is injectable</th></tr>
+    <tr><td><code>SECURITY INVOKER</code> (default)</td><td>The caller's permissions</td><td>Damage is limited to what the app account can already do</td></tr>
+    <tr><td><code>SECURITY DEFINER</code></td><td>The function owner's permissions</td><td>The attacker may reach what the owner can reach</td></tr>
+  </table></div>
+
+  <h3>A fixed function can still be risky</h3>
+  <p>Suppose we make the function static (no dynamic SQL) and mark it <code>SECURITY DEFINER</code>. Is it still vulnerable to SQL injection through <code>p_department</code>? No, because the value is never part of the SQL text. But other risks remain, and they come from the elevated permissions:</p>
+  <ul>
+    <li><strong>It may expose more than the caller should see.</strong> If the owner can read the whole table and the app account cannot, any caller can now read every department. That function is an access control decision, so it needs its own authorization.</li>
+    <li><strong><code>search_path</code> hijacking.</strong> The function finds <code>employees</code> by searching schemas in order. If an untrusted user can create objects in a schema searched earlier, they can place a look-alike object there and trick the function into using it. The PostgreSQL docs say to set <code>search_path</code> on <code>SECURITY DEFINER</code> functions, with <code>pg_temp</code> last, for this reason.</li>
+    <li><strong>Who can call it.</strong> By default, execute permission on a new function is granted to <code>PUBLIC</code> (everyone). Revoke it and grant it only to the roles that need it.</li>
+    <li><strong>An over-powered owner.</strong> Make the owner a role with only the rights the function needs, not a superuser or an admin account.</li>
+  </ul>
+<pre><code>BEGIN;
+CREATE FUNCTION search_employees(p_department TEXT)
+RETURNS SETOF employees AS $$ ... $$
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp;
+REVOKE ALL ON FUNCTION search_employees(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION search_employees(TEXT) TO report_app;
+COMMIT;</code></pre>
+
+  <h2>7. Fixing injection does not fix access control</h2>
+  <p>A perfectly safe query can still return data the user should not see. In our example the report returns <code>salary</code> for a department the caller picks. If the user is not allowed to see salaries, parameterized queries do not help. Injection controls answer "can the user change my query?". Authorization answers "should this user get this data?". You need both, and the <a href="broken-access-control-idor.html">access control post</a> covers the second one.</p>
+
+  <h2>8. How to test it safely</h2>
+  <p>Only test systems you own or have permission to test, and use a staging database filled with fake data, never real salaries.</p>
+  <ul class="check">
+    <li>Record the normal behavior first: a real department and a real sort option.</li>
+    <li>Test <code>department</code> and <code>sort_by</code> separately, since one is a value and one is an identifier.</li>
+    <li>Send a single quote <code>'</code> in each. A database syntax error, or a different response from normal input, shows the text is reaching the SQL.</li>
+    <li>Send <code>x' OR '1'='1</code> as the department. If you get more rows than a normal request, the value is being treated as SQL.</li>
+    <li>For <code>sort_by</code>, send an expression instead of a column name and compare the ordering to normal input. Different behavior means the text is part of the query.</li>
+    <li>For second-order cases, store a value with quotes and SQL text in a name, then trigger the job that reads it, and check that nothing unexpected runs.</li>
+    <li>After the fix: values must be bound, unsupported sort options must be rejected, and legitimate names like <code>Director's Report</code> must still work.</li>
+    <li>Add regression tests for each case, and search the code for <code>execute(</code> calls that build the query with f-strings, <code>%</code> formatting or <code>+</code>. Static analysis tools such as Bandit flag many of these.</li>
+    <li>Limit the damage if something slips through: give the application's database role only the access it needs. This does not prevent injection, but it limits what injection can do.</li>
+  </ul>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>SQL injection happens when input becomes part of the command. Keep commands and data separate.</li>
+    <li><strong>Values</strong> go in placeholders. <strong>Identifiers</strong> (column and table names, sort direction) cannot, so map user choices to an allowlist you control.</li>
+    <li>A security fix that breaks the feature, like <code>ORDER BY %s</code>, will be reverted. Check that the fix works as well as that it is safe.</li>
+    <li>Stored data is still untrusted. Second-order injection is stopped by using placeholders at every query that uses the data, not by cleaning it on the way in.</li>
+    <li>A stored procedure is only as safe as the SQL inside it. <code>SECURITY DEFINER</code> raises the impact, so set <code>search_path</code>, limit who can run it and keep the owner's rights small.</li>
+    <li>Injection fixes and access control are separate jobs. Do both.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP: SQL Injection Prevention Cheat Sheet</a></li>
+    <li><a href="https://www.psycopg.org/docs/sql.html" target="_blank" rel="noopener">psycopg2 docs: SQL string composition</a></li>
+    <li><a href="https://www.postgresql.org/docs/current/sql-createfunction.html" target="_blank" rel="noopener">PostgreSQL docs: CREATE FUNCTION (writing SECURITY DEFINER functions safely)</a></li>
+    <li><a href="https://www.postgresql.org/message-id/28246.1349989583%40sss.pgh.pa.us" target="_blank" rel="noopener">PostgreSQL mailing list: "non-integer constant in ORDER BY"</a></li>
+  </ul>
+
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Examples are simplified. Library behavior and AWS defaults change, so check current documentation and test on your own versions.
+    More notes: <a href="broken-access-control-idor.html">Broken access control</a> · <a href="jwt-security.html">JWT security</a> · <a href="ssrf-aws-metadata-credentials.html">SSRF on AWS</a>
+  </footer>
+</div>
+</body>
+</html>

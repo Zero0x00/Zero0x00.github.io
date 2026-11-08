@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S3 Presigned URLs: Why Revoking Access Doesn't Stop the Download | Mohammad Arif</title>
+  <meta name="description" content="Why a presigned S3 URL keeps working after you revoke a user's access, how to contain one document right now, and how to design for fast, per-user revocation." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/aws-security/s3-presigned-url-revocation.html" />
+  <meta property="og:title" content="S3 Presigned URLs: Why Revoking Access Doesn't Stop the Download" />
+  <meta property="og:description" content="Why a presigned S3 URL keeps working after you revoke a user's access, how to contain one document right now, and how to design for fast, per-user revocation." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .tag { display:inline-block; font-size:.7rem; font-weight:800; letter-spacing:.06em; padding:1px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; border:1px solid var(--line); color:var(--muted); }
+    .tag.crit { color:#fb7185; border-color:#fb7185; } .tag.high { color:#fbbf24; border-color:#fbbf24; } .tag.med { color:#7dd3fc; border-color:#7dd3fc; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+  <meta property="article:published_time" content="2026-11-08" />
+  <meta property="article:modified_time" content="2026-11-08" />
+  <meta property="article:author" content="https://mohdarif.com/" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "S3 Presigned URLs: Why Revoking Access Doesn't Stop the Download",
+  "description": "Why a presigned S3 URL keeps working after you revoke a user's access, how to contain one document right now, and how to design for fast, per-user revocation.",
+  "url": "https://mohdarif.com/notes/aws-security/s3-presigned-url-revocation.html",
+  "mainEntityOfPage": "https://mohdarif.com/notes/aws-security/s3-presigned-url-revocation.html",
+  "datePublished": "2026-11-08",
+  "dateModified": "2026-11-08",
+  "inLanguage": "en-US",
+  "image": "https://mohdarif.com/og-image.png",
+  "author": {
+    "@type": "Person",
+    "@id": "https://mohdarif.com/#person",
+    "name": "Mohammad Arif",
+    "url": "https://mohdarif.com/"
+  },
+  "publisher": {
+    "@id": "https://mohdarif.com/#person"
+  },
+  "isPartOf": {
+    "@id": "https://mohdarif.com/notes/#blog"
+  },
+  "articleSection": "AWS security",
+  "keywords": [
+    "S3 presigned URL",
+    "revoke access",
+    "S3 bucket policy explicit deny",
+    "signatureAge",
+    "AWS STS",
+    "download gateway",
+    "AWS security",
+    "cloud security"
+  ]
+}
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a> · <a class="back" href="/notes/">All notes</a>
+
+  <header>
+    <div class="eyebrow">AWS Security · S3</div>
+    <h1>S3 Presigned URLs: Why Revoking Access Doesn't Stop the Download</h1>
+    <p class="sub">Your app checks permissions, hands out a presigned URL, and then the permission is removed. The download still works. This post explains why, and what to do about it.</p>
+    <div class="byline">By Mohammad Arif · 12 min read</div>
+  </header>
+
+  <p>This post is for backend and cloud engineers who let users download files from S3. You do not need to know S3 policies in depth. We start with what a presigned URL actually is, then look at why revoking access afterwards does not stop it, and then at your options, from an emergency fix to a better long-term design. A short note on scope: it builds on the authorization ideas in the <a href="../web-security/broken-access-control-idor.html">access control post</a>, but you can read this one on its own.</p>
+
+  <h2>1. What a presigned URL is</h2>
+  <p>A normal S3 request needs AWS credentials. A browser has none, and you do not want to give users any. A <strong>presigned URL</strong> solves this: your application uses its own credentials to sign a specific request ahead of time, and gives the signed URL to the user. The user can then download the object with nothing else.</p>
+  <p>A presigned URL looks roughly like this:</p>
+<pre><code>https://my-bucket.s3.amazonaws.com/tenant-a/documents/8271.pdf
+  ?X-Amz-Algorithm=AWS4-HMAC-SHA256
+  &amp;X-Amz-Credential=...        who signed it (the application's credentials)
+  &amp;X-Amz-Date=...              when it was signed
+  &amp;X-Amz-Expires=3600          how long it is valid, in seconds
+  &amp;X-Amz-Signature=...         proof that the signer allowed exactly this request</code></pre>
+  <p>Two ideas matter for the rest of this post:</p>
+  <ul>
+    <li><strong>It is a bearer token.</strong> A bearer token works for whoever holds it. S3 does not ask who is using the URL. If Bob forwards it to a friend, or it ends up in a log, it works for them too.</li>
+    <li><strong>S3 sees the signer, not your user.</strong> The URL carries the application's AWS identity (for example a Lambda execution role). It does not carry "Bob" or "the contractor". Those names exist only in your own database.</li>
+  </ul>
+
+  <h2>2. The problem</h2>
+  <p>A typical flow: Bob asks for document 8271, your backend checks that Bob may read it, and it returns a presigned URL valid for 60 minutes. Bob downloads the file directly from S3, so large files never pass through your servers.</p>
+  <p>Now add one event:</p>
+
+  <figure><svg viewBox="0 0 760 235" role="img" aria-label="Timeline: at 10:00 the app checks Bob and issues a 60 minute URL; at 10:05 the owner revokes Bob in the database; at 10:10 Bob uses the old URL and S3 serves the file because S3 checks the signature, not the database."><path class="ln" d="M40 70H720"/><circle cx="120" cy="70" r="6" class="ar"/><circle cx="360" cy="70" r="6" class="ar"/><circle cx="600" cy="70" r="6" class="ar"/><text x="120" y="48" text-anchor="middle" class="t-h">10:00</text><text x="360" y="48" text-anchor="middle" class="t-h">10:05</text><text x="600" y="48" text-anchor="middle" class="t-h">10:10</text><rect class="ok" x="20" y="100" width="200" height="110" rx="10"/><text x="120" y="126" text-anchor="middle" class="t-b">Issue</text><text x="120" y="150" text-anchor="middle" class="t-s">App checks: Bob is allowed</text><text x="120" y="168" text-anchor="middle" class="t-s">App signs a URL, valid 60 min</text><text x="120" y="186" text-anchor="middle" class="t-s">Bob receives it</text><rect class="hl" x="260" y="100" width="200" height="110" rx="10"/><text x="360" y="126" text-anchor="middle" class="t-b">Revoke</text><text x="360" y="150" text-anchor="middle" class="t-s">Owner removes Bob</text><text x="360" y="168" text-anchor="middle" class="t-s">Database is updated</text><text x="360" y="186" text-anchor="middle" class="t-s">The URL itself is unchanged</text><rect class="risk" x="500" y="100" width="200" height="110" rx="10"/><text x="600" y="126" text-anchor="middle" class="t-b">Download</text><text x="600" y="150" text-anchor="middle" class="t-s">Bob uses the old URL</text><text x="600" y="168" text-anchor="middle" class="t-s">S3 checks the signature,</text><text x="600" y="186" text-anchor="middle" class="t-s">not your database. It works.</text></svg><figcaption>Figure 1. Revoking access in your database changes nothing about a URL that was already signed.</figcaption></figure>
+
+  <p>An engineering manager might say "our authorization engine revoked access correctly, so this must be an S3 bug". It is not. The app and S3 each did what they are designed to do:</p>
+  <ul>
+    <li>Your app checked access <strong>once</strong>, when it issued the URL.</li>
+    <li>S3 checks the <strong>signature and its own policies</strong> on every request. It never asks your database whether Bob is still allowed.</li>
+  </ul>
+  <p>AWS documents this directly. A presigned URL can be used multiple times until it expires, and S3 checks the expiry time when the request starts. If a download begins just before expiry, it continues even if the time passes during the transfer.</p>
+
+  <h2>3. First idea: shorter URLs</h2>
+  <p>The easy improvement is to shorten the lifetime, for example from 60 minutes to 1 or 5 minutes. This reduces the window in which a revoked user can <em>start</em> a download. It is worth doing, but know its limits:</p>
+  <ul>
+    <li>It is not instant revocation. A 5-minute URL can still be used for up to 5 minutes after the revoke.</li>
+    <li>A download that already started can continue past the expiry.</li>
+    <li>Very short URLs mean clients that retry or resume need a fresh URL each time.</li>
+  </ul>
+  <p><strong>A guardrail worth adding:</strong> your code decides the expiry, and code has bugs. You can make S3 refuse old signatures, whatever the URL says, with a bucket policy condition. AWS gives this example, which denies presigned requests whose signature is more than 10 minutes old (the value is in milliseconds):</p>
+<pre><code>{
+  "Sid": "DenyOldPresignedUrls",
+  "Effect": "Deny",
+  "Principal": { "AWS": "*" },
+  "Action": "s3:*",
+  "Resource": "arn:aws:s3:::my-bucket/*",
+  "Condition": { "NumericGreaterThan": { "s3:signatureAge": "600000" } }
+}</code></pre>
+  <p>There is also a hard ceiling from the credentials: if the URL is signed with temporary credentials (a Lambda role, for instance), it stops working when those credentials expire, even if you asked for a longer expiry.</p>
+
+  <h2>4. A second idea that does not work: "revoke after the first download"</h2>
+  <p>It sounds sensible to cancel the URL once it has been used. But S3 does not track that. A presigned URL is not single-use, and S3 has no per-URL "used" flag. To get single-use behavior you would need your own system to remember and enforce it, which is a download gateway (covered below).</p>
+
+  <h2>5. Containing one document right now</h2>
+  <p>Suppose a confidential document was shared with the wrong contractor, the owner revoked them, and the contractor still holds a URL with 4 minutes left. You cannot shorten a URL that already exists. You can change what S3 will allow for that object.</p>
+
+  <h3>Option A: explicit deny on that object</h3>
+  <p>AWS evaluates all applicable policies on each request, and an explicit <code>Deny</code> always wins over any <code>Allow</code>. A valid signature does not override it. (AWS's own presigned URL troubleshooting notes tell you to check that the bucket policy does not explicitly deny the object.) Add a statement to the bucket policy:</p>
+<pre><code>{
+  "Sid": "EmergencyBlockDocument8271",
+  "Effect": "Deny",
+  "Principal": "*",
+  "Action": "s3:GetObject",
+  "Resource": "arn:aws:s3:::enterprise-documents/tenant-a/documents/8271.pdf"
+}</code></pre>
+  <p>What to know before using it:</p>
+  <ul>
+    <li><strong>It blocks everyone</strong> for that object, including the owner and every other authorized user. It stops the contractor, but it is not "revoke only the contractor".</li>
+    <li><strong>It affects only that object.</strong> Other documents and other customers keep working.</li>
+    <li><strong>It is not retroactive.</strong> It will not take back bytes already downloaded, and it may not stop a transfer already in progress.</li>
+    <li><strong>It can take a moment to apply.</strong> Confirm it by using the old URL and expecting <code>AccessDenied</code>. To confirm what happened afterwards, turn on CloudTrail data events for the bucket. They are not logged by default.</li>
+    <li><strong>It does not scale.</strong> A bucket policy is limited to 20 KB. This is an emergency lever, not a place to keep per-user permissions for millions of documents.</li>
+  </ul>
+
+  <h3>Option B: move the object to a new key</h3>
+  <p>A presigned URL is tied to a specific object key. If you copy the object to a new key and delete the old one, the old URL points at nothing. The owner and other authorized users are not blocked for long, because your app issues them a fresh URL for the new key the next time they ask. The tradeoffs: large objects need a multipart copy, versioned buckets keep old versions, and anything that stores the old key must be updated. Test this on a copy before relying on it.</p>
+
+  <h3>Option C: revoke the signing role's sessions (the big hammer)</h3>
+  <p>AWS notes that a presigned URL expires when the credentials that created it are revoked or deleted. IAM can revoke a role's existing sessions, which adds a deny for anything issued before that moment. But if every tenant's URLs are signed by the same Lambda role, this stops <strong>every customer's</strong> in-flight downloads. Use it when the signing credentials themselves leak, not to remove one contractor.</p>
+
+  <h2>6. Why you cannot deny "just the contractor"</h2>
+  <p>The manager's next question is natural: "Can a bucket policy deny only the contractor's URL and leave everyone else's working?" Look at what each side knows:</p>
+  <div class="tbl"><table>
+    <tr><th>Your application knows</th><th>S3 sees on the request</th></tr>
+    <tr><td>Which user asked (Bob, the contractor)</td><td>The signing identity (the shared Lambda role)</td></tr>
+    <tr><td>Which tenant, which grant, when it was revoked</td><td>The object key</td></tr>
+    <tr><td>Whether the grant is still valid</td><td>When the URL was signed, and whether it is expired</td></tr>
+    <tr><td></td><td>Request details such as source IP</td></tr>
+  </table></div>
+  <p>Every URL signed by the Lambda role looks the same to S3, whoever holds it. So a policy on the signer's identity would block all of them or none of them. You could deny the contractor's source IP address, but you would need to know it, and they can change it. The real issue is that you have not given S3 a trustworthy way to tell the contractor apart from the other users.</p>
+
+  <h2>7. Designing for revocation</h2>
+  <p>Before choosing, ask the product team one question: <strong>does revocation need to take effect immediately, or is a short delay acceptable?</strong> The answer picks the design.</p>
+  <div class="tbl"><table>
+    <tr><th>If you need</th><th>Use</th><th>Cost</th></tr>
+    <tr><td>A small delay is fine for ordinary files</td><td>Short-lived presigned URLs (1 to 5 minutes), issued only after an authorization check, plus the <code>s3:signatureAge</code> guardrail</td><td>Lowest. A bounded window of exposure remains.</td></tr>
+    <tr><td>Immediate, per-user revocation for sensitive documents</td><td>A download gateway: the user asks your service, which checks current permissions on every new request and streams from S3 (or hands out a very short URL after the check)</td><td>More bandwidth, latency, cost and another service to keep available</td></tr>
+    <tr><td>Per-user control inside S3 itself</td><td>Sign with a separate short-lived STS session per user or per grant, so S3 sees a distinct identity you can deny</td><td>More credential management and STS calls. Test it carefully.</td></tr>
+    <tr><td>Block one object for everyone, now</td><td>Object-level deny or key rotation (section 5)</td><td>Emergency only. Does not scale.</td></tr>
+  </table></div>
+
+  <h3>The separate-session idea in more detail</h3>
+  <p>Instead of signing every URL with the one shared role identity, your service assumes the role with a different session name for each user or grant, then signs with those credentials. The request is then evaluated as that specific session, and IAM exposes the session name in <code>aws:userid</code> (in the form <code>ROLEID:session-name</code>). A policy can then deny one session without touching the others. Two cautions: assumed-role sessions last at least 15 minutes, and a URL signed by a session is limited by that session's lifetime. Treat this as a design to prototype and test against your real policies, not a drop-in.</p>
+
+  <h3>The gateway tradeoff</h3>
+  <p>A gateway gives you the strongest control, because every new download passes through your authorization check. Even then, a gateway cannot take back bytes the client already received, and stopping a transfer that is already running needs you to manage and close the connection yourself. If revocation must also end running downloads, check authorization again during streaming, not only at the start.</p>
+
+  <h2>8. How to test it</h2>
+  <ul class="check">
+    <li>Issue a URL, revoke the user, then call the old URL with <code>curl</code>. Decide what the correct result is for your chosen design and write that down.</li>
+    <li>Apply the emergency deny and confirm the old URL returns <code>AccessDenied</code>. Remove it and confirm access returns.</li>
+    <li>Confirm another document and another tenant are unaffected while the deny is in place.</li>
+    <li>Start a large download, revoke during the transfer, and note what happens. Know your behavior before an incident.</li>
+    <li>Try a URL with a very long expiry. The <code>signatureAge</code> guardrail should refuse it once the signature is old enough.</li>
+    <li>Check CloudTrail data events show the denied requests, so you can prove containment.</li>
+    <li>If you use per-user sessions, deny one session and confirm the others still work.</li>
+  </ul>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>A presigned URL is a bearer token signed by your app's identity. S3 checks the signature and policies, not your database.</li>
+    <li>Revoking access in your database does not affect URLs that were already issued. This is expected behavior, not an S3 bug.</li>
+    <li>Shorter URLs and a <code>signatureAge</code> cap reduce the window. They do not give instant revocation.</li>
+    <li>For emergencies, an explicit deny on the object (or moving it to a new key) works, but it affects everyone using that object, and bucket policies are not built for per-user rules.</li>
+    <li>For real per-user, immediate revocation, put a gateway in the path or give S3 distinct identities to deny. Pick based on how fast revocation must happen and what you can afford.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html" target="_blank" rel="noopener">AWS docs: Download and upload objects with presigned URLs</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html" target="_blank" rel="noopener">AWS docs: Adding a bucket policy (20 KB size limit)</a></li>
+    <li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html" target="_blank" rel="noopener">AWS docs: Revoking IAM role temporary security credentials</a></li>
+  </ul>
+
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Examples are simplified. Library behavior and AWS defaults change, so check current documentation and test on your own versions.
+    More notes: <a href="../web-security/broken-access-control-idor.html">Broken access control</a> · <a href="cross-account-sts-incident-response.html">AWS cross-account incident response</a> · <a href="../web-security/ssrf-aws-metadata-credentials.html">SSRF on AWS</a>
+  </footer>
+</div>
+</body>
+</html>

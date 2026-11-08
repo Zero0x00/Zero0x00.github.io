@@ -2,11 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://mohdarif.com/</loc>
-    <lastmod>2026-11-07</lastmod>
+    <lastmod>2026-11-08</lastmod>
   </url>
   <url>
     <loc>https://mohdarif.com/notes/</loc>
-    <lastmod>2026-11-07</lastmod>
+    <lastmod>2026-11-08</lastmod>
   </url>
   <url>
     <loc>https://mohdarif.com/notes/LLM/attention_is_all_you_need.html</loc>
@@ -91,5 +91,17 @@
   <url>
     <loc>https://mohdarif.com/notes/web-security/ssrf-aws-metadata-credentials.html</loc>
     <lastmod>2026-11-07</lastmod>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/web-security/broken-access-control-idor.html</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/web-security/sql-injection-values-identifiers.html</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/aws-security/s3-presigned-url-revocation.html</loc>
+    <lastmod>2026-11-08</lastmod>
   </url>
 </urlset>
