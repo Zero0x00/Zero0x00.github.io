@@ -301,6 +301,17 @@ COMMIT;</code></pre>
   <h2>7. Fixing injection does not fix access control</h2>
   <p>A perfectly safe query can still return data the user should not see. In our example the report returns <code>salary</code> for a department the caller picks. If the user is not allowed to see salaries, parameterized queries do not help. Injection controls answer "can the user change my query?". Authorization answers "should this user get this data?". You need both, and the <a href="broken-access-control-idor.html">access control post</a> covers the second one.</p>
 
+  <h3>Three different identities</h3>
+  <p>It helps to keep three questions apart, because teams often merge them:</p>
+  <div class="tbl"><table>
+    <tr><th>Concept</th><th>Question it answers</th><th>Example</th></tr>
+    <tr><td>Authentication</td><td>Who is making the request?</td><td>Alice, from her login or JWT</td></tr>
+    <tr><td>Authorization</td><td>What is that person allowed to access?</td><td>Alice may see her own record, not Bob's</td></tr>
+    <tr><td>Database privileges</td><td>What may the database role do?</td><td>The role <code>app_service</code> may <code>SELECT</code> from <code>employees</code></td></tr>
+  </table></div>
+  <p>Here is where they come apart. Most web apps connect to PostgreSQL with <strong>one shared role</strong>, say <code>app_service</code>, no matter which user is logged in. The database never hears the name "Alice". If <code>app_service</code> can read the whole <code>employees</code> table and nothing in the app or in PostgreSQL (for example row-level security) filters rows, then Alice's request can return Bob's salary. The database allowed it because <code>app_service</code> is allowed. Alice's login was never part of that decision.</p>
+  <p>This also explains what "runs with the caller's permissions" means in section 6. For a normal function (<code>SECURITY INVOKER</code>), the caller is the database role the app connected as, which is <code>app_service</code>, not the person at the keyboard. The app has to add the "is this user allowed?" rule itself.</p>
+
   <h2>8. How to test it safely</h2>
   <p>Only test systems you own or have permission to test, and use a staging database filled with fake data, never real salaries.</p>
   <ul class="check">

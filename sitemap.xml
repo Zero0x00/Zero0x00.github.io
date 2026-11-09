@@ -104,4 +104,8 @@
     <loc>https://mohdarif.com/notes/aws-security/s3-presigned-url-revocation.html</loc>
     <lastmod>2026-11-08</lastmod>
   </url>
+  <url>
+    <loc>https://mohdarif.com/notes/web-security/insecure-deserialization-python-pickle.html</loc>
+    <lastmod>2026-11-08</lastmod>
+  </url>
 </urlset>

@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Insecure Deserialization in Python: Why pickle.loads() on Untrusted Data Is Code Execution | Mohammad Arif</title>
+  <meta name="description" content="How Python pickle runs code while loading data, why checks after pickle.loads() come too late, why authenticated senders are not trusted senders, how it differs from Java and PHP deserialization, and how to fix or contain it." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/web-security/insecure-deserialization-python-pickle.html" />
+  <meta property="og:title" content="Insecure Deserialization in Python: Why pickle.loads() on Untrusted Data Is Code Execution" />
+  <meta property="og:description" content="How Python pickle runs code while loading data, why checks after pickle.loads() come too late, why authenticated senders are not trusted senders, how it differs from Java and PHP deserialization, and how to fix or contain it." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .tag { display:inline-block; font-size:.7rem; font-weight:800; letter-spacing:.06em; padding:1px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; border:1px solid var(--line); color:var(--muted); }
+    .tag.crit { color:#fb7185; border-color:#fb7185; } .tag.high { color:#fbbf24; border-color:#fbbf24; } .tag.med { color:#7dd3fc; border-color:#7dd3fc; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+  <meta property="article:published_time" content="2026-11-08" />
+  <meta property="article:modified_time" content="2026-11-08" />
+  <meta property="article:author" content="https://mohdarif.com/" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Insecure Deserialization in Python: Why pickle.loads() on Untrusted Data Is Code Execution",
+  "description": "How Python pickle runs code while loading data, why checks after pickle.loads() come too late, why authenticated senders are not trusted senders, how it differs from Java and PHP deserialization, and how to fix or contain it.",
+  "url": "https://mohdarif.com/notes/web-security/insecure-deserialization-python-pickle.html",
+  "mainEntityOfPage": "https://mohdarif.com/notes/web-security/insecure-deserialization-python-pickle.html",
+  "datePublished": "2026-11-08",
+  "dateModified": "2026-11-08",
+  "inLanguage": "en-US",
+  "image": "https://mohdarif.com/og-image.png",
+  "author": {
+    "@type": "Person",
+    "@id": "https://mohdarif.com/#person",
+    "name": "Mohammad Arif",
+    "url": "https://mohdarif.com/"
+  },
+  "publisher": {
+    "@id": "https://mohdarif.com/#person"
+  },
+  "isPartOf": {
+    "@id": "https://mohdarif.com/notes/#blog"
+  },
+  "articleSection": "Web & API security",
+  "keywords": [
+    "insecure deserialization",
+    "Python pickle",
+    "pickle.loads",
+    "remote code execution",
+    "__reduce__",
+    "Kafka security",
+    "secure code review",
+    "application security"
+  ]
+}
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a> · <a class="back" href="/notes/">All notes</a>
+
+  <header>
+    <div class="eyebrow">Web Security · Secure Code Review</div>
+    <h1>Insecure Deserialization in Python: Why pickle.loads() on Untrusted Data Is Code Execution</h1>
+    <p class="sub">A job service reads a Base64 string, unpickles it, and then checks the owner. The check never gets a chance to matter. This post shows why, with a harmless demo you can run.</p>
+    <div class="byline">By Mohammad Arif · 15 min read</div>
+  </header>
+
+  <p>This post is for Python developers and code reviewers. You do not need to know what "deserialization" means yet. We start with the idea, then look at why Python's <code>pickle</code> is a special case, then at the fixes people try that do not work, and finally at what does work and what to do if you cannot switch right away. There is a small demo you can run on your own machine. It only prints a line of text.</p>
+
+  <h2>1. What serialization is, and why people use it</h2>
+  <p><strong>Serializing</strong> means turning an object in memory (a Python dictionary, a job description, a trained model) into bytes or text so you can save it or send it somewhere. <strong>Deserializing</strong> is the reverse: reading those bytes back into an object.</p>
+  <p>You do this whenever a service puts a job on a queue, caches an object, or stores a result. Python has several ways to do it. Two matter here:</p>
+  <ul>
+    <li><strong>JSON</strong> only describes plain data: strings, numbers, lists and dictionaries. Reading JSON can never run your code, because JSON has no way to say "call this function".</li>
+    <li><strong><code>pickle</code></strong> can rebuild almost any Python object, including instances of your own classes. That convenience is exactly the problem.</li>
+  </ul>
+
+  <h2>2. The code under review</h2>
+  <p>A backend service takes jobs from other internal applications. The job arrives as a Base64 string (Base64 is just a way to write bytes as text) and the service loads it:</p>
+<pre><code>import base64
+import pickle
+
+def process_job(encoded_payload):
+    raw_data = base64.b64decode(encoded_payload)
+    job = pickle.loads(raw_data)
+    if job.owner_id != current_user.id:
+        raise PermissionError("Unauthorized")
+    execute_job(job)</code></pre>
+  <p>The developer says: "Only authenticated internal applications can submit jobs, and we check that the job belongs to the current user before running it. So there is no security risk." Two claims, and both fall apart for the same reason: the dangerous step happens before either one matters.</p>
+
+  <h2>3. What pickle really is</h2>
+  <p>A pickle is not a description of data. It is a short <strong>program</strong> for a tiny virtual machine inside Python. The program can say things like "import this function" and "call it with these arguments". Python's documentation says it plainly: it is possible to construct malicious pickle data which will execute arbitrary code during unpickling, and you should never unpickle data that could have come from an untrusted source.</p>
+  <p>How does a pickle ask for a function call? When Python pickles an object, it asks the object how to rebuild itself, using a method called <code>__reduce__</code>. That method returns "a callable and its arguments". When the pickle is loaded, Python makes that call. A class we write ourselves can return any callable. Here is a harmless demo:</p>
+<pre><code>import pickle
+
+class Probe:
+    def __reduce__(self):
+        return (print, ("code ran during pickle.loads",))
+
+blob = pickle.dumps(Probe())     # what an attacker would send
+job = pickle.loads(blob)         # prints the message, returns None
+print(job)</code></pre>
+  <p>Running it prints:</p>
+<pre><code>code ran during pickle.loads
+None</code></pre>
+  <p>The message appeared while <code>pickle.loads</code> was running. We used <code>print</code> because it is harmless. An attacker uses the same mechanism with a different function, one that starts a program, reads a file or sends your credentials to a server. Nothing special about the application is needed: the attacker does not have to find a weak library in your code or know anything about your job class. Any code that can be imported on the server can be called.</p>
+  <p>This is also why a pickle is different from "malformed input" that a parser rejects. The loader does not parse it and decide it is bad. It carries out the instructions.</p>
+
+  <h2>4. Why the owner check is too late</h2>
+  <p>Look at the order of operations again:</p>
+
+  <figure><svg viewBox="0 0 760 175" role="img" aria-label="Four steps: bytes arrive and pass a size limit; pickle.loads runs the bytes as instructions and code can execute here; type and owner checks come too late; the job runs only if the checks pass."><defs><marker id="d1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect class="n" x="20" y="25" width="150" height="115" rx="10"/><text x="95" y="51" text-anchor="middle" class="t-b">1. Receive</text><text x="95" y="76" text-anchor="middle" class="t-s">Base64 bytes arrive</text><text x="95" y="94" text-anchor="middle" class="t-s">size limit passes</text><rect class="risk" x="210" y="25" width="150" height="115" rx="10"/><text x="285" y="51" text-anchor="middle" class="t-b">2. pickle.loads</text><text x="285" y="76" text-anchor="middle" class="t-s">The bytes run as</text><text x="285" y="94" text-anchor="middle" class="t-s">instructions. Code</text><text x="285" y="112" text-anchor="middle" class="t-s">can execute here.</text><rect class="hl" x="400" y="25" width="150" height="115" rx="10"/><text x="475" y="51" text-anchor="middle" class="t-b">3. Your checks</text><text x="475" y="76" text-anchor="middle" class="t-s">type and owner_id</text><text x="475" y="94" text-anchor="middle" class="t-s">Too late: the harm</text><text x="475" y="112" text-anchor="middle" class="t-s">may be done</text><rect class="n" x="590" y="25" width="150" height="115" rx="10"/><text x="665" y="51" text-anchor="middle" class="t-b">4. Run the job</text><text x="665" y="76" text-anchor="middle" class="t-s">Only if the</text><text x="665" y="94" text-anchor="middle" class="t-s">checks pass</text><path class="ln" d="M170 82H210" marker-end="url(#d1)"/><path class="ln" d="M360 82H400" marker-end="url(#d1)"/><path class="ln" d="M550 82H590" marker-end="url(#d1)"/></svg><figcaption>Figure 1. The owner check sits after the dangerous step, so it cannot protect against it.</figcaption></figure>
+
+  <p>In our demo, <code>pickle.loads</code> returned <code>None</code>, so the next line <code>job.owner_id</code> would raise an error. The check did "fail". But the message had already been printed. In a real attack, the harmful action has already happened by the time the check raises an error.</p>
+  <p>Two small points that people often get wrong:</p>
+  <ul>
+    <li><strong>Base64 is not protection.</strong> It only changes how the bytes are written. Decoding it does nothing harmful. The danger starts at <code>pickle.loads</code>.</li>
+    <li><strong>A size limit does not help.</strong> Useful code is tiny. A payload that runs a command is well under a kilobyte.</li>
+  </ul>
+
+  <h3>A small proof of concept against the service</h3>
+  <p>Here is the whole thing in one file you can run. It contains the vulnerable function from section 2 (with a stand-in user so it runs on its own) and the payload a sender would build. The payload only prints a line, so it is safe to run:</p>
+<pre><code>import base64, pickle
+
+# the vulnerable service
+class ApprovedJob:
+    def __init__(self, owner_id): self.owner_id = owner_id
+
+class User:
+    id = 7
+current_user = User()
+
+def execute_job(job): print("job executed")
+
+def process_job(encoded_payload):
+    raw_data = base64.b64decode(encoded_payload)
+    job = pickle.loads(raw_data)
+    if job.owner_id != current_user.id:
+        raise PermissionError("Unauthorized")
+    execute_job(job)
+
+# the sender's side: build a payload, Base64 it, submit it
+class Probe:
+    def __reduce__(self):
+        return (print, ("[PoC] this ran inside pickle.loads, before any check",))
+
+payload = base64.b64encode(pickle.dumps(Probe())).decode()
+
+try:
+    process_job(payload)
+except Exception as e:
+    print("service answered with an error:", type(e).__name__)</code></pre>
+  <p>Output:</p>
+<pre><code>[PoC] this ran inside pickle.loads, before any check
+service answered with an error: AttributeError</code></pre>
+  <figure><img src="img/pickle-poc.gif" width="760" height="286" loading="lazy" alt="Recorded terminal session: python3 poc.py is typed and run, and it prints the line 'this ran inside pickle.loads, before any check' followed by 'service answered with an error: AttributeError'." style="display:block;width:100%;height:auto;border-radius:8px" /><figcaption>A real run of the PoC above. The command was typed into a live bash session and the script executed, and the terminal output was recorded with its real timing and replayed into this GIF. Nothing in the terminal text is edited. Only the caption bar at the bottom is added.</figcaption></figure>
+
+  <p>Read the order. The <code>[PoC]</code> line came first, from inside <code>pickle.loads</code>. The error came afterwards, because the object that came back was not a job. From the outside the request simply failed, but the sender's code had already run. To turn this into a real attack, the sender would swap <code>print</code> for a more harmful function. Nothing else about the payload changes.</p>
+
+  <h2>5. "But only authenticated services can send jobs"</h2>
+  <p>This is the other half of the developer's argument. There are two different ideas here:</p>
+  <ul>
+    <li><strong>Authenticated</strong> means we know who sent the message.</li>
+    <li><strong>Trusted</strong> means we are sure the bytes they sent are safe to run.</li>
+  </ul>
+  <p>The first does not give you the second. Ways a malicious pickle can still arrive from an authenticated sender:</p>
+  <ul>
+    <li><strong>A compromised sender.</strong> An attacker takes over one internal service that is allowed to submit jobs, through a vulnerability or a stolen token. Now they can submit anything, and the message looks like it came from a legitimate service.</li>
+    <li><strong>A stolen credential.</strong> The attacker does not need to break into any service. A stolen API key, session cookie or bearer token for a legitimate sender is enough.</li>
+    <li><strong>A sender that forwards untrusted data.</strong> If a trusted service takes a file or message from a user and publishes it as a job without rebuilding it, the attacker's bytes travel through the trusted service. (This only happens if the service really passes attacker-influenced bytes through. A service that builds each message itself from safe values does not.)</li>
+  </ul>
+  <p>Authentication reduces who can try. It does not make the bytes safe. A field inside the message saying <code>{"producer": "trusted-service"}</code> proves nothing either, because the sender writes it.</p>
+
+  <h2>6. A fix that looks right but is not</h2>
+  <p>The developer agrees pickle is risky, but a rewrite is expensive, so they add two controls:</p>
+<pre><code>raw_data = base64.b64decode(encoded_payload)
+
+if len(raw_data) &gt; 1024 * 1024:
+    raise ValueError("Payload too large")
+
+job = pickle.loads(raw_data)
+
+if type(job) is not ApprovedJob:
+    raise ValueError("Invalid job type")
+if job.owner_id != current_user.id:
+    raise PermissionError("Unauthorized")
+execute_job(job)</code></pre>
+  <p>"We added a size limit and an exact type check. An attacker cannot pass an unexpected object anymore." Both checks still run after the dangerous call (or, for the size limit, have nothing to do with it). Worse, the type check can pass. A pickle is a sequence of steps. It can call a function, throw the result away, and then build a perfectly ordinary <code>ApprovedJob</code> at the end. I tested this with a hand-written pickle that prints a line and then returns a real <code>ApprovedJob</code>:</p>
+<pre><code>side effect runs first
+type check passes: True owner_id: 7</code></pre>
+  <p>So "the result is an <code>ApprovedJob</code>" says nothing about what happened on the way. This is the main rule of the whole topic: <strong>any check on the result of a deserializer is too late if the deserializer can run code.</strong> You cannot look at a pickle's resulting type without running it, and running it is the danger.</p>
+
+  <h3>What about restricting which classes can be loaded?</h3>
+  <p>Python lets you write your own unpickler and override a method called <code>find_class</code>, which is called whenever the pickle asks for a class or function. You can refuse everything not on a short list. The Python docs show this, and also tell you to be careful about what you allow. It reduces the attack surface, but it is hard to get right: any allowed class or function that can be abused is a way in, and a later code change can add one without anyone noticing. OWASP says the same, that filtering "does not make arbitrary untrusted deserialization safe". Treat it as an extra layer, not the fix.</p>
+  <p>There is no "safe mode" for <code>pickle.loads</code> on untrusted data. The standard library does not offer one.</p>
+
+  <h2>7. How this differs from Java and PHP</h2>
+  <p>If you have seen deserialization bugs in Java or PHP, the basic mistake is the same: the bytes decide what objects get created. But what an attacker can <em>do</em> with that differs, and it explains why pickle is the easiest of the three to exploit.</p>
+  <div class="tbl"><table>
+    <tr><th></th><th>Python <code>pickle</code></th><th>Java <code>ObjectInputStream</code></th><th>PHP <code>unserialize()</code></th></tr>
+    <tr><td><strong>What the bytes contain</strong></td><td>Instructions: "import this function, call it with these arguments"</td><td>Class names and field values to rebuild</td><td>Class names and property values to rebuild</td></tr>
+    <tr><td><strong>How code runs</strong></td><td>Python calls the function the bytes name, directly</td><td>Methods of the classes being rebuilt (such as <code>readObject</code>) run automatically</td><td>Magic methods such as <code>__wakeup()</code> or <code>__unserialize()</code> run automatically, and destructors can run when objects are cleaned up</td></tr>
+    <tr><td><strong>What the attacker needs</strong></td><td>Nothing special. Any function that can be imported on the server will do, and the standard library is always there</td><td>A chain of classes already on the classpath (a "gadget chain") whose methods add up to something harmful</td><td>A chain of classes the application already loads or can autoload (sometimes called a property-oriented chain)</td></tr>
+    <tr><td><strong>Built-in limit</strong></td><td>None that is safe. A custom <code>find_class</code> allowlist is possible but fragile</td><td>Serialization filters (<code>ObjectInputFilter</code>, JDK 9 and later, with some backports) can allowlist classes</td><td>The <code>allowed_classes</code> option can restrict which classes are created</td></tr>
+  </table></div>
+  <p>The main difference is in the second and third rows. In Java and PHP the attacker cannot bring new code. They can only chain together code you already shipped, so a working exploit depends on which libraries and versions your application includes. That is why public tools that bundle known chains exist (ysoserial for Java, PHPGGC for PHP), and why upgrading or removing a library sometimes closes a specific hole without fixing the design.</p>
+  <p>In Python, pickle skips that step. The stream can name a function directly, so the attacker does not need a particular library to be present. There is nothing to "hunt for", which makes the attack simpler.</p>
+  <p>The defenses line up too. Allowlists (<code>ObjectInputFilter</code> in Java, <code>allowed_classes</code> in PHP, <code>find_class</code> in Python) reduce the risk, and none of the three language documentation sets promises they make untrusted input safe. The PHP manual says not to pass untrusted input to <code>unserialize()</code> whatever the <code>allowed_classes</code> value is, and to use JSON instead. The advice from section 8 holds in all three languages: for data that crosses a trust boundary, use a data-only format with a strict schema.</p>
+
+  <h2>8. The real fix: do not execute the data</h2>
+  <p>Use a format that can only describe data, check its shape, and decide yourself which code runs:</p>
+<pre><code>import json
+
+JOB_HANDLERS = {
+    "resize_image": resize_image,
+    "generate_report": generate_report,
+}
+
+def process_job(raw_payload, current_user):
+    job = json.loads(raw_payload)                    # only dicts, lists, strings, numbers
+    handler = JOB_HANDLERS.get(job.get("type"))      # the sender picks a name, you pick the code
+    if handler is None:
+        raise ValueError("Unsupported job type")
+    params = validate_params(job["type"], job.get("params", {}))   # your schema check
+    if not can_run_job(current_user, job["type"], params):         # your authorization check
+        raise PermissionError("Forbidden")
+    return handler(**params)</code></pre>
+  <p><code>validate_params</code> and <code>can_run_job</code> are yours to write. They must check types, ranges, lengths and who is allowed to run what. What matters about this design:</p>
+  <ul>
+    <li><strong>Data in, no code in.</strong> Parsing JSON cannot call a function. The Python docs say deserializing untrusted JSON does not in itself create a code execution vulnerability.</li>
+    <li><strong>The sender names the job, you own the code.</strong> The message says <code>"generate_report"</code>. Your code looks that name up in a fixed table.</li>
+    <li><strong>Authorization is a separate step.</strong> It runs before the job, on values you have already validated.</li>
+    <li><strong>Schema-based formats work too.</strong> Protocol Buffers and Avro (common with Kafka) define the allowed fields up front and also only carry data.</li>
+  </ul>
+  <p>JSON is still not magic: a huge or deeply nested document can use a lot of memory, so set size and depth limits, and keep the handler list short. But the failure is a rejected request, not code running on your server.</p>
+
+  <h2>9. Kafka: "only internal services can publish"</h2>
+  <p>The same argument appears in a message-queue form. The consumer reads messages from a Kafka topic and unpickles them. The manager says: "Only authenticated internal services can publish, and outsiders cannot reach the topic, so pickle is safe."</p>
+  <p>Kafka access controls decide who can write to a topic. They do not say anything about what the bytes do. The attack paths from section 5 apply unchanged: a compromised publisher, a stolen publisher credential, or a publisher that passes attacker-influenced bytes along. And the damage can be larger than with one HTTP request, because one malicious message can be read by every consumer group on the topic.</p>
+
+  <h2>10. If you cannot replace pickle yet</h2>
+  <p>Sometimes the migration cannot happen before launch. In that case, be honest that you are managing a risk, not removing it. These are the controls I would put in first, in order:</p>
+  <ol>
+    <li><strong>Limit who can write, and prove where bytes came from.</strong> Tight Kafka write permissions (or queue permissions) for the topic. Sign each message with a key (for example HMAC) held only by the legitimate producer, and verify the signature <em>before</em> unpickling, rejecting anything unsigned. Python's docs suggest signing with <code>hmac</code> for this. Two limits to remember: a valid signature shows who made the message, not that it is safe, so a compromised producer with the key still gets through; and the key must be managed properly, not hard-coded.</li>
+    <li><strong>Isolate the process that unpickles.</strong> Run it with the fewest possible rights: no cloud credentials it does not need, a restricted network, a read-only file system where possible, resource limits. If code does run, the attacker gets a small box and not your whole environment.</li>
+    <li><strong>Close the paths for untrusted data.</strong> Find every place where user-supplied or external data can end up in a message, and make producers build messages from safe values instead of passing bytes through.</li>
+    <li><strong>Add limits and monitoring.</strong> Message size, memory and time limits, and alerts for unexpected child processes, outbound connections or crashes in the consumer.</li>
+    <li><strong>Write down the risk and a migration plan with a date.</strong> A temporary exception should have an owner and an end.</li>
+  </ol>
+  <div class="box"><p><strong>When is pickle acceptable at all?</strong> When the bytes are created by your own code, stored or sent where an attacker cannot write or change them, and loaded only by an isolated process with limited rights. A local cache your own application writes and reads is a typical example. "Our network is internal" and "senders are logged in" do not meet that bar.</p></div>
+
+  <h2>11. How to test it safely</h2>
+  <p>Only test systems you own or have permission to test, in an isolated environment.</p>
+  <ul class="check">
+    <li>Build a harmless payload like the <code>Probe</code> class in section 3, one that only records or prints an event.</li>
+    <li>Send it to the service. If the event appears before the owner or type check, the finding is confirmed, and you have shown the ordering without causing any harm.</li>
+    <li>Test a payload that does something harmless and then builds a valid <code>ApprovedJob</code>. If the type check passes, you have shown that the check cannot be relied on.</li>
+    <li>After the fix, send the same payloads. The new parser must reject them without running any code. They should fail as invalid JSON or a schema error.</li>
+    <li>Test unsupported job types, wrong field types, oversized and deeply nested input, and a valid job for a different user.</li>
+    <li>Search the codebase: <code>pickle.loads</code>, <code>pickle.load</code>, <code>pandas.read_pickle</code>, <code>joblib.load</code>, <code>shelve</code>, <code>torch.load</code>, <code>yaml.load</code> without a safe loader, and similar calls in libraries. Many of these rely on pickle or similar mechanisms internally, so check each library's documentation, especially for files such as models that come from outside.</li>
+  </ul>
+
+  <h2>12. Things that sound safe but are not</h2>
+  <ul>
+    <li><strong>"Only authenticated services can send."</strong> Authenticated is not trusted. Services get compromised and credentials get stolen.</li>
+    <li><strong>"We check the owner afterwards."</strong> The check runs after the code has already executed.</li>
+    <li><strong>"We check the type afterwards."</strong> A pickle can run code and still end by building the expected type.</li>
+    <li><strong>"It is Base64 encoded."</strong> That is encoding, not protection.</li>
+    <li><strong>"We limit the size."</strong> Harmful payloads are tiny.</li>
+    <li><strong>"We allow only certain classes."</strong> It helps, but any permitted class or function can become a weak point as the code changes.</li>
+    <li><strong>"The network is internal."</strong> That decides who can reach the service, not whether the bytes are safe.</li>
+  </ul>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>Deserializing means turning bytes back into objects. With JSON the result is plain data. With <code>pickle</code>, loading runs instructions.</li>
+    <li><code>pickle.loads</code> on bytes someone else controls can run any code available to the server. Checks after the call, including type and owner checks, are too late.</li>
+    <li>Authentication tells you who sent the bytes. It does not tell you the bytes are safe.</li>
+    <li>Java and PHP deserialization need a chain of classes the app already has. Pickle can call any importable function directly, so it is the easiest to exploit. The fix is the same in all three: data-only formats.</li>
+    <li>The real fix is a data-only format with a strict schema, a fixed list of job types that you map to your own code, and separate authorization.</li>
+    <li>If you must keep pickle for a while, limit who can write, verify signatures before loading, isolate the consumer, close paths for untrusted input, and plan the migration. These reduce risk. They do not make the data safe.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://docs.python.org/3/library/pickle.html" target="_blank" rel="noopener">Python docs: pickle (security warning, restricting globals, __reduce__)</a></li>
+    <li><a href="https://www.php.net/manual/en/function.unserialize.php" target="_blank" rel="noopener">PHP manual: unserialize() (warning and allowed_classes)</a></li>
+    <li><a href="https://docs.oracle.com/en/java/javase/21/core/serialization-filtering1.html" target="_blank" rel="noopener">Oracle Java docs: Serialization Filtering</a></li>
+    <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html" target="_blank" rel="noopener">OWASP: Deserialization Cheat Sheet</a></li>
+  </ul>
+
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Examples are simplified. Library behavior and AWS defaults change, so check current documentation and test on your own versions.
+    More notes: <a href="sql-injection-values-identifiers.html">SQL injection</a> · <a href="broken-access-control-idor.html">Broken access control</a> · <a href="ssrf-aws-metadata-credentials.html">SSRF on AWS</a>
+  </footer>
+</div>
+</body>
+</html>
