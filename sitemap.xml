@@ -2,11 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://mohdarif.com/</loc>
-    <lastmod>2026-11-08</lastmod>
+    <lastmod>2026-11-13</lastmod>
   </url>
   <url>
     <loc>https://mohdarif.com/notes/</loc>
-    <lastmod>2026-11-08</lastmod>
+    <lastmod>2026-11-13</lastmod>
   </url>
   <url>
     <loc>https://mohdarif.com/notes/LLM/attention_is_all_you_need.html</loc>
@@ -107,5 +107,13 @@
   <url>
     <loc>https://mohdarif.com/notes/web-security/insecure-deserialization-python-pickle.html</loc>
     <lastmod>2026-11-08</lastmod>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/web-security/google-drive-ai-integration-security-review.html</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://mohdarif.com/notes/web-security/stale-authorization-revocation-cache-export.html</loc>
+    <lastmod>2026-11-13</lastmod>
   </url>
 </urlset>

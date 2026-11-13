@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reviewing a Google Drive Integration for a Multi-Tenant AI Search Product | Mohammad Arif</title>
+  <meta name="description" content="A worked product security review of a SaaS feature that syncs Google Drive into AI search: job authorization, OAuth account linking, organization-wide data sources, scopes and untrusted documents." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/web-security/google-drive-ai-integration-security-review.html" />
+  <meta property="og:title" content="Reviewing a Google Drive Integration for a Multi-Tenant AI Search Product" />
+  <meta property="og:description" content="A worked product security review of a SaaS feature that syncs Google Drive into AI search: job authorization, OAuth account linking, organization-wide data sources, scopes and untrusted documents." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .tag { display:inline-block; font-size:.7rem; font-weight:800; letter-spacing:.06em; padding:1px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; border:1px solid var(--line); color:var(--muted); }
+    .tag.crit { color:#fb7185; border-color:#fb7185; } .tag.high { color:#fbbf24; border-color:#fbbf24; } .tag.med { color:#7dd3fc; border-color:#7dd3fc; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+  <meta property="article:published_time" content="2026-11-13" />
+  <meta property="article:modified_time" content="2026-11-13" />
+  <meta property="article:author" content="https://mohdarif.com/" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Reviewing a Google Drive Integration for a Multi-Tenant AI Search Product",
+  "description": "A worked product security review of a SaaS feature that syncs Google Drive into AI search: job authorization, OAuth account linking, organization-wide data sources, scopes and untrusted documents.",
+  "url": "https://mohdarif.com/notes/web-security/google-drive-ai-integration-security-review.html",
+  "mainEntityOfPage": "https://mohdarif.com/notes/web-security/google-drive-ai-integration-security-review.html",
+  "datePublished": "2026-11-13",
+  "dateModified": "2026-11-13",
+  "inLanguage": "en-US",
+  "image": "https://mohdarif.com/og-image.png",
+  "author": {
+    "@type": "Person",
+    "@id": "https://mohdarif.com/#person",
+    "name": "Mohammad Arif",
+    "url": "https://mohdarif.com/"
+  },
+  "publisher": {
+    "@id": "https://mohdarif.com/#person"
+  },
+  "isPartOf": {
+    "@id": "https://mohdarif.com/notes/#blog"
+  },
+  "articleSection": "Web & API security",
+  "keywords": [
+    "product security",
+    "architecture review",
+    "OAuth account linking",
+    "OAuth state",
+    "PKCE",
+    "multi-tenant SaaS",
+    "Google Drive integration",
+    "RAG security",
+    "background job authorization",
+    "application security"
+  ]
+}
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a> · <a class="back" href="/notes/">All notes</a>
+
+  <header>
+    <div class="eyebrow">Product Security · Architecture Review</div>
+    <h1>Reviewing a Google Drive Integration for a Multi-Tenant AI Search Product</h1>
+    <p class="sub">How to review a feature you have never seen: what to ask first, which findings matter most, and how to say what is proven and what is only possible.</p>
+    <div class="byline">By Mohammad Arif · 17 min read</div>
+  </header>
+
+  <p>This post is for security engineers and developers who are asked to review a feature they have never seen before. It follows one realistic review from the first question to the findings. The feature connects a customer's Google Drive to an AI search product. You do not need to know OAuth or vector databases in advance. Each term is explained when it first appears, and each finding builds on the one before it.</p>
+  <p>The review uses a method that matters as much as the findings: <strong>for every weakness, say what is proven and what is only possible.</strong> It is easy to jump from "a check is missing" to "an attacker can steal everything". Reviewers who do that lose credibility with the engineers they work with. We will practice the careful version throughout.</p>
+
+  <h2>1. The feature</h2>
+  <p>The product is a <strong>multi-tenant SaaS</strong> application. "SaaS" means customers use it over the internet instead of installing it. "Multi-tenant" means many customer organizations (<strong>tenants</strong>) share the same running system, so one customer's data must never reach another.</p>
+  <p>The new feature lets a customer connect their Google Drive. The platform copies the documents, splits them into pieces, indexes them, and lets users search and summarize them with AI. The engineering team describes it like this:</p>
+  <ul>
+    <li>Customers connect Google Drive through <strong>OAuth 2.0</strong>. This is the standard way for a user to let one application access their data in another, without sharing a password. After the user approves, the application receives a <strong>refresh token</strong>, a long-lived credential it can trade for short-lived <strong>access tokens</strong> whenever it needs to call Google.</li>
+    <li>Refresh tokens are stored in the database so <strong>background workers</strong> (programs that run without a user present) can keep documents in sync.</li>
+    <li>Document content goes into a shared <strong>vector database</strong>. This stores each piece of text (a <strong>chunk</strong>) as a list of numbers called an <strong>embedding</strong>, which lets the system find chunks with a similar meaning to a question. This is called <strong>semantic search</strong>.</li>
+    <li>The AI assistant takes the chunks found by search and uses them to write an answer. This pattern is often called <strong>RAG</strong> (retrieval-augmented generation).</li>
+    <li>The team's security summary: "We use Google's OAuth flow, HTTPS, and users must log in to our platform."</li>
+  </ul>
+
+  <figure><svg viewBox="0 0 760 290" role="img" aria-label="Architecture: users call the SaaS API, which validates a JWT; the API puts sync jobs on a queue; shared workers read refresh tokens from PostgreSQL and fetch documents from Google Drive; chunks go into a shared vector database with tenant_id metadata."><defs><marker id="g1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect class="n" x="20" y="40" width="110" height="70" rx="10"/><text x="75" y="68" text-anchor="middle" class="t-b">Users</text><text x="75" y="88" text-anchor="middle" class="t-s">from many tenants</text><rect class="hl" x="170" y="35" width="170" height="80" rx="10"/><text x="255" y="62" text-anchor="middle" class="t-b">SaaS API</text><text x="255" y="82" text-anchor="middle" class="t-s">checks the JWT</text><text x="255" y="98" text-anchor="middle" class="t-s">tenant_id comes from it</text><rect class="n" x="380" y="40" width="110" height="70" rx="10"/><text x="435" y="68" text-anchor="middle" class="t-b">Queue</text><text x="435" y="88" text-anchor="middle" class="t-s">sync jobs</text><rect class="pod" x="530" y="35" width="210" height="80" rx="10"/><text x="635" y="62" text-anchor="middle" class="t-b">Shared workers</text><text x="635" y="82" text-anchor="middle" class="t-s">one identity, all tenants</text><text x="635" y="98" text-anchor="middle" class="t-s">can decrypt every token</text><rect class="n" x="170" y="185" width="170" height="85" rx="10"/><text x="255" y="212" text-anchor="middle" class="t-b">PostgreSQL</text><text x="255" y="232" text-anchor="middle" class="t-s">shared tables, tenant_id</text><text x="255" y="248" text-anchor="middle" class="t-s">encrypted refresh tokens</text><rect class="n" x="375" y="185" width="170" height="85" rx="10"/><text x="460" y="212" text-anchor="middle" class="t-b">Vector database</text><text x="460" y="232" text-anchor="middle" class="t-s">one shared index</text><text x="460" y="248" text-anchor="middle" class="t-s">tenant_id on each chunk</text><rect class="risk" x="565" y="185" width="175" height="85" rx="10"/><text x="652" y="212" text-anchor="middle" class="t-b">Google Drive</text><text x="652" y="232" text-anchor="middle" class="t-s">outside our control</text><text x="652" y="248" text-anchor="middle" class="t-s">contents are untrusted</text><path class="ln" d="M130 75H170" marker-end="url(#g1)"/><path class="ln" d="M340 75H380" marker-end="url(#g1)"/><path class="ln" d="M490 75H530" marker-end="url(#g1)"/><path class="ln" d="M255 115V185" marker-end="url(#g1)"/><path class="ln" d="M300 115V150H430V185" marker-end="url(#g1)"/><path class="ln" d="M652 115V185" marker-end="url(#g1)"/></svg><figcaption>Figure 1. The architecture the review starts from. The shared workers and the untrusted Google Drive content are where most of the later findings sit.</figcaption></figure>
+
+  <h2>2. How to start a review of something unfamiliar</h2>
+  <p>You will not be handed a list of threats. A reliable approach is to ask three kinds of questions before judging anything:</p>
+  <ol>
+    <li><strong>Where does each identity come from?</strong> Who is the user, which tenant are they in, and is that read from something the server verified or from something the client sent?</li>
+    <li><strong>Where does the data live, and who can read it?</strong> Follow a document from Google into the database and the vector index, and then out to the AI answer.</li>
+    <li><strong>What does each background job carry, and does it re-check anything?</strong> Anything that runs without a user in front of it needs its own authorization, because no login protects it.</li>
+  </ol>
+  <p>The answers in this case:</p>
+  <ul>
+    <li>Users log in through the company's single sign-on and receive a signed <strong>JWT</strong> (a token the server can verify) containing <code>sub</code>, <code>tenant_id</code>, <code>role</code> and an expiry. The backend checks the signature, issuer, audience and expiry. The tenant comes from the verified token, not from a query string. (The <a href="jwt-security.html">JWT post</a> explains how this can go wrong. Here it is done correctly.)</li>
+    <li>All tenants share one PostgreSQL database with a <code>tenant_id</code> column. There is no row-level security and no database per tenant.</li>
+    <li>The vector index is shared. Each chunk carries <code>tenant_id</code> as metadata, and the backend adds a filter for the caller's tenant on every search.</li>
+    <li>Workers are shared and see every tenant's jobs. A job holds <code>tenant_id</code>, <code>user_id</code> and <code>connection_id</code>. Workers have no user JWT.</li>
+    <li>The refresh tokens are encrypted in the database with one shared key that workers can use. All workers have the same identity and can read every tenant's connection record.</li>
+    <li>The app asks Google for the <code>drive.readonly</code> scope (read access to Drive files), and it indexes everything it can reach. Users cannot pick folders.</li>
+    <li>Users can call <code>POST /api/integrations/google-drive/sync</code> with a <code>connection_id</code> to queue a sync.</li>
+  </ul>
+
+  <h2>3. A claim to test: "semantic search can bypass the tenant filter"</h2>
+  <p>A common first reaction is: "AI search is based on meaning, so a user could just ask for another tenant's documents and get them." That sounds right and is not what the evidence shows.</p>
+<pre><code>results = vector_db.search(
+    query=user_question,
+    filter={"tenant_id": authenticated_user.tenant_id},
+)</code></pre>
+  <p>The filter is applied by the database, outside the model. It limits which chunks are even considered. A question that mentions another company does not change that filter, because the filter is not part of the question. The same is true of a prompt-injection instruction hidden in a document: text that the model reads cannot change a rule that the database enforces.</p>
+  <p>So the honest statement is: <strong>if the filter is applied everywhere and the metadata is correct, cross-tenant retrieval is not possible through the question alone.</strong> To claim a leak you need evidence of another weakness, such as:</p>
+  <ul>
+    <li>another retrieval path (a "similar documents" feature, an export, a cache) that forgets the filter,</li>
+    <li>chunks written with the wrong <code>tenant_id</code> (for example, taken from a job the user could influence),</li>
+    <li>a bug in how the vector database applies filters.</li>
+  </ul>
+  <p>For stronger isolation, some teams use a separate namespace or collection per tenant instead of one shared index with a filter. That moves the boundary from a parameter every query must remember to a structure the query cannot skip. It costs more to operate. The point for a reviewer is to <em>check</em> the filter on every path, not to assume it, and to treat the shared index as a place where a single missing parameter becomes a leak.</p>
+  <div class="box"><p><strong>A rule that helps:</strong> never let the model be the thing that enforces access. The model only sees what the application hands it. Authorization has to happen before that.</p></div>
+
+  <h2>4. Finding: the sync endpoint and the worker</h2>
+  <p>This is the first place I would spend time, because it joins three risky facts: the user chooses an ID, workers are shared across tenants, and workers can use every stored refresh token. Here is the code the team shows:</p>
+<pre><code>@app.post("/api/integrations/google-drive/sync")
+def trigger_sync(request):
+    user = validate_jwt(request.headers["Authorization"])
+    connection_id = request.json["connection_id"]
+    queue.publish({"connection_id": connection_id, "requested_by": user.id})
+    return {"status": "queued"}
+
+def process_sync_job(job):
+    connection = database.get_connection(job["connection_id"])
+    refresh_token = decrypt(connection.refresh_token)
+    google_token = refresh_google_access_token(refresh_token)
+    documents = fetch_google_drive_documents(google_token)
+    index_documents(documents, tenant_id=connection.tenant_id)</code></pre>
+  <p>The developer says: "The user is authenticated, and we always index with the tenant ID stored in the database. So this is secure."</p>
+  <p>What does the attacker control? Not the user ID: that comes from the verified token. They control <code>connection_id</code>, which comes from the request body. This is the same object-level authorization problem described in the <a href="broken-access-control-idor.html">access control post</a>: the API checks that the caller is logged in, but never checks that this caller may use this connection.</p>
+  <p>Now trace what happens when a user from tenant A sends tenant B's connection ID:</p>
+
+  <figure><svg viewBox="0 0 760 255" role="img" aria-label="A tenant A user sends tenant B's connection ID. The API does not check the connection. The queue holds the job. The worker decrypts tenant B's refresh token and indexes under tenant B. Established: tenant A can trigger a sync on B's connection. Not established: that A can read B's documents."><defs><marker id="g2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect class="n" x="20" y="20" width="150" height="100" rx="10"/><text x="95" y="46" text-anchor="middle" class="t-b">Tenant A user</text><text x="95" y="70" text-anchor="middle" class="t-s">valid JWT</text><text x="95" y="88" text-anchor="middle" class="t-s">sends B's connection_id</text><rect class="hl" x="205" y="20" width="150" height="100" rx="10"/><text x="280" y="46" text-anchor="middle" class="t-b">API</text><text x="280" y="70" text-anchor="middle" class="t-s">checks the token</text><text x="280" y="88" text-anchor="middle" class="t-s">not the connection</text><rect class="n" x="390" y="20" width="150" height="100" rx="10"/><text x="465" y="46" text-anchor="middle" class="t-b">Queue</text><text x="465" y="70" text-anchor="middle" class="t-s">job holds B's</text><text x="465" y="88" text-anchor="middle" class="t-s">connection_id</text><rect class="risk" x="575" y="20" width="165" height="100" rx="10"/><text x="657" y="46" text-anchor="middle" class="t-b">Worker</text><text x="657" y="70" text-anchor="middle" class="t-s">decrypts B's token</text><text x="657" y="88" text-anchor="middle" class="t-s">indexes under tenant B</text><path class="ln" d="M170 70H205" marker-end="url(#g2)"/><path class="ln" d="M355 70H390" marker-end="url(#g2)"/><path class="ln" d="M540 70H575" marker-end="url(#g2)"/><rect class="risk" x="20" y="150" width="350" height="85" rx="10"/><text x="195" y="176" text-anchor="middle" class="t-b">Established by this code</text><text x="195" y="198" text-anchor="middle" class="t-s">A can trigger a sync job on B's Google connection</text><text x="195" y="216" text-anchor="middle" class="t-s">using B's stored refresh token</text><rect class="n" x="390" y="150" width="350" height="85" rx="10"/><text x="565" y="176" text-anchor="middle" class="t-b">Not established by this code</text><text x="565" y="198" text-anchor="middle" class="t-s">That A can read B's documents. They are</text><text x="565" y="216" text-anchor="middle" class="t-s">indexed under tenant B, not tenant A</text></svg><figcaption>Figure 2. The vulnerability is real, but the proven impact is an unauthorized privileged action, not a data leak.</figcaption></figure>
+
+  <p>This is the careful reading. <strong>Proven:</strong> tenant A can make the platform use tenant B's Google connection to run a sync. The effects can include extra Google API calls (and possible quota exhaustion or rate-limiting for tenant B), disrupted or unexpected syncs, and processing another customer's data without their authorization. <strong>Not proven:</strong> that A receives B's documents, because they are indexed with <code>connection.tenant_id</code>, which belongs to B. A confidentiality impact needs a second weakness, such as a retrieval path that ignores tenant, an exposed job result, or a bug in how <code>tenant_id</code> is set.</p>
+  <p>The way to say it in a review: <em>"An attacker can trigger an unauthorized sync of another tenant's connection. Whether that becomes a data disclosure depends on where the results go and whether another access control weakness exposes them."</em></p>
+
+  <h3>The fix has to be in two places</h3>
+  <p><strong>At the API:</strong> load the connection, then decide whether this user may sync it. Do not assume the rule is "the user owns it". In an enterprise product, several admins might manage one organization-wide connection, so the real rule comes from your integration policy: tenant membership, role, and any sharing rules. When the answer is no, return the same "not found" response you return for a connection that does not exist.</p>
+<pre><code>connection = database.get_connection(connection_id)
+if connection is None or not can_sync_connection(user, connection):
+    raise NotFound()
+queue.publish({"connection_id": connection.id, "requested_by": user.id})</code></pre>
+  <p><strong>At the worker:</strong> a queue message is input, not proof. Anyone or anything that can write to the queue can forge one. The worker should load the canonical connection record, confirm the job is genuine (for example by signing jobs or by looking the request up in a trusted table), check the connection is still active and the requester is still allowed, and only <em>then</em> decrypt the token. For scheduled syncs with no user, authorize against the connection's own sync policy.</p>
+  <p>Notice what the worker check protects. A request that the API rejects never reaches the queue. A forged or stale message that does reach the queue is stopped before any token is decrypted or any Google call is made. That order matters, because the sensitive operation is using the credential.</p>
+  <h3>Reduce what a single worker can do</h3>
+  <p>Even with correct checks, the design has a large blast radius. Every worker can decrypt every tenant's refresh token with one shared key, so one compromised worker exposes all of them. Encryption at rest protects a stolen disk. It does nothing against a compromised application, because the application holds the key. Ways to reduce this:</p>
+  <ul>
+    <li>Use a key-management service with per-tenant (or per-connection) keys, and let the worker decrypt only for the job it is processing.</li>
+    <li>Give workers a token that works for one job, instead of access to the whole table.</li>
+    <li>Log every refresh-token use, so unusual access stands out.</li>
+    <li>Consider splitting workers by sensitivity or by tenant tier.</li>
+  </ul>
+  <p><strong>How to verify:</strong> create two tenants with separate test connections and synthetic documents. Then check that tenant A syncing its own connection works, tenant A submitting tenant B's ID is denied, a same-tenant user without integration rights is denied, an admin with rights is allowed, a connection revoked before the job runs makes the worker refuse, and a forged queue message naming another tenant's connection is rejected. For every denied case, also check that <strong>no token was decrypted, no Google call was made and nothing was indexed.</strong> A clean error response is not enough: the privileged action itself must not happen.</p>
+
+  <h2>5. Finding: how accounts get linked</h2>
+  <p>Next, look at how a customer connects Google in the first place. The app starts the flow like this:</p>
+<pre><code>GET https://accounts.google.com/o/oauth2/v2/auth
+    ?client_id=OUR_CLIENT_ID
+    &amp;redirect_uri=https://saas.example.com/oauth/callback
+    &amp;response_type=code
+    &amp;scope=https://www.googleapis.com/auth/drive.readonly</code></pre>
+  <p>After the user approves, Google redirects the browser back to <code>/oauth/callback?code=AUTHORIZATION_CODE</code>. The backend swaps the <strong>authorization code</strong> (a one-time value) for tokens and stores the refresh token under the currently logged-in SaaS user. The manager says: "Google handles authentication and authorization, so our OAuth integration is secure."</p>
+  <p>Google handles the consent screen. It does not know which SaaS account started the flow. That link is the application's job, and here nothing protects it. There is no <code>state</code> parameter and no PKCE.</p>
+
+  <h3>What the attack looks like</h3>
+  <p>This is called <strong>account-linking CSRF</strong> (cross-site request forgery: making a logged-in user's browser perform an action they did not intend).</p>
+  <ol>
+    <li>The attacker starts the flow with their <em>own</em> Google account and approves it. Google redirects back with a valid, unused code. The attacker stops before sending that callback request to the SaaS app, so the code stays unused.</li>
+    <li>The attacker gets a victim, who is logged in to the SaaS app, to open the callback URL with the attacker's code (a link, an image tag or a redirect).</li>
+    <li>The SaaS backend receives the callback in the victim's session, exchanges the code and stores the result under the victim's account.</li>
+    <li>The victim's SaaS account is now linked to the <em>attacker's</em> Google Drive.</li>
+  </ol>
+  <p>Required conditions: the code is valid and unused, the victim's session is present on the callback, and the app does not check that the callback belongs to a flow this user started. Note what this is and is not. It does not steal the victim's Google credentials. It makes the victim's account trust the attacker's data source, which can fill the victim's search with attacker-controlled documents or support a prompt-injection attempt. The actual impact depends on what the integration does after linking.</p>
+
+  <h3>What <code>state</code> and PKCE do</h3>
+  <p><strong><code>state</code></strong> is a random value your app creates, stores against the user's session, sends to Google, and checks when the callback arrives. If the value does not match the one stored for this session, the callback is rejected. It should be unpredictable, single-use and short-lived. Google's own documentation tells clients to prevent CSRF and suggests <code>state</code>, and RFC 9700 (the current OAuth security best practice) says clients must prevent CSRF, either with a one-time <code>state</code> value or by relying on PKCE after confirming the server supports it. Note that <code>state</code> does not validate redirect URIs and does not stop open redirects. Those need their own controls.</p>
+  <p><strong>PKCE</strong> (pronounced "pixie") protects the code itself, so a stolen or injected code is useless to the attacker. It works like this, and the roles are easy to mix up:</p>
+  <ol>
+    <li>The client creates a random secret, the <strong>code verifier</strong>, and keeps it.</li>
+    <li>It computes the <strong>code challenge</strong> from the verifier: <code>BASE64URL(SHA256(verifier))</code>. This is the <code>S256</code> method.</li>
+    <li>It sends the <em>challenge</em> (and the method) in the authorization request.</li>
+    <li>After getting the code, it sends the <em>verifier</em> in the token request.</li>
+    <li>The server hashes the verifier and compares it with the challenge it stored. A mismatch means the exchange is refused.</li>
+  </ol>
+  <p>Memory aid: the <strong>verifier is the secret</strong>, and the challenge is derived from it. An attacker who sees only the challenge cannot work backwards to the verifier. (For a longer walkthrough with a live demo, see the <a href="PKCE.html">PKCE post</a>.) RFC 9700 requires PKCE for public clients and recommends it for all kinds of clients, including web applications. Using both <code>state</code> and PKCE is a sensible default.</p>
+  <p><strong>Tests for this step:</strong> a callback with no <code>state</code>, with another session's <code>state</code>, and with a reused <code>state</code> must all be rejected. A wrong PKCE verifier must fail the token exchange. A replayed code must fail. An unregistered redirect URI must be refused by Google. Starting a flow as user A and finishing it in user B's session must not create a connection.</p>
+
+  <h2>6. Finding: correct OAuth, wrong authorization</h2>
+  <p>Suppose the team adds everything above: random single-use <code>state</code>, PKCE with S256, strict redirect URIs, one-time codes and encrypted tokens. There is one more business rule:</p>
+  <div class="box"><p>"An organization can connect multiple Google accounts. Any organization member can start the flow. Once connected, the new connection is available to the organization's shared sync system."</p></div>
+  <p>The developer says: "We have secured OAuth. No account-linking concerns remain." The OAuth flow is now sound. The problem is somewhere else.</p>
+  <p>OAuth answers one question: <em>did this person let our app read this Google account?</em> It does not answer: <em>should an ordinary member be allowed to add an organization-wide data source?</em> Those are separate decisions, and only the second one is the SaaS product's business.</p>
+  <p>Here is the attack, and it needs no protocol bug. An ordinary employee, or a malicious insider, connects a Google account of their choice and completes OAuth correctly. The platform syncs the account's documents and indexes them into the organization's shared search. Two kinds of harm follow:</p>
+  <ul>
+    <li><strong>Confidentiality:</strong> the account may hold private or restricted documents that the organization never agreed to make searchable by colleagues.</li>
+    <li><strong>Integrity:</strong> an attacker-controlled account can supply misleading documents, so the company's AI search gives wrong answers, or documents containing instructions aimed at the model (indirect prompt injection, covered in section 8).</li>
+  </ul>
+  <p>The impact depends on how the platform shares indexed documents. It is not guaranteed by OAuth succeeding. But it is a product decision nobody made explicitly, which is why it is a review finding.</p>
+
+  <h3>Separate three decisions</h3>
+  <div class="tbl"><table>
+    <tr><th>Operation</th><th>What it should require</th></tr>
+    <tr><td>Connect a personal Google account</td><td>The user's consent, and permission to create a personal integration</td></tr>
+    <tr><td>Register an organization-wide data source</td><td>An explicit organizational decision: an administrator or designated integration manager approves it</td></tr>
+    <tr><td>Make documents searchable by other people</td><td>Document-level visibility rules, so sharing in the SaaS follows who may see each document</td></tr>
+  </table></div>
+  <p>A sensible design lets ordinary members connect personal sources that only they can search by default. Organization-wide sources need an approver. Every connection, approval, scope change and disconnect is written to an audit log.</p>
+
+  <h2>7. Finding: scope and consent</h2>
+  <p>A <strong>scope</strong> is the permission level an app asks for. <code>drive.readonly</code> lets the app read all the files the connected account can reach. Google classifies it as a <strong>restricted</strong> scope. For comparison, Google recommends <code>drive.file</code> for most use cases and classifies it as non-sensitive. It limits the app to files the user opens with the app or shares through the Google Picker, so the user chooses which files the app can see.</p>
+  <p>This feature indexes everything it can reach and gives users no way to choose. In a personal Drive, that includes tax papers, medical records and unrelated personal files. The user did click "Allow" on Google's consent screen, so this is not automatically a privacy violation. The question is whether what the app asks for, what it processes, how long it keeps it and what it discloses match what the user and the organization reasonably expect. Better designs:</p>
+  <ul>
+    <li>Ask for the narrowest scope that works, and let users pick folders or files (for example with the Picker and <code>drive.file</code>) where the product allows it.</li>
+    <li>Say plainly what is indexed, who can search it, and how long it stays.</li>
+    <li>Make disconnecting do real cleanup: delete the stored token, revoke it with Google, and remove the indexed chunks and any derived data.</li>
+  </ul>
+
+  <h2>8. Document content is untrusted input</h2>
+  <p>Everything that comes out of Google Drive is content someone else wrote. <strong>Indirect prompt injection</strong> means hiding instructions in a document that the AI later reads as part of its context, hoping it obeys them. It helps to ask what the injected text can actually reach. Three outcomes are very different:</p>
+  <div class="tbl"><table>
+    <tr><th>What the document does</th><th>What it needs to succeed</th><th>Typical impact</th></tr>
+    <tr><td>Influences the answer</td><td>The chunk is retrieved and the model follows it</td><td>Misleading or manipulated summaries</td></tr>
+    <tr><td>Makes the model use a privileged tool</td><td>The assistant has tools (send, share, call APIs) with real permissions</td><td>Actions taken on the user's behalf</td></tr>
+    <tr><td>Reaches another tenant's data</td><td>A separate authorization failure in retrieval or tools</td><td>Cross-tenant disclosure (not caused by the document alone)</td></tr>
+  </table></div>
+  <p>The third row is the one people over-claim. A hidden instruction cannot by itself override a filter the database enforces, or choose which tenant a worker runs as. It only becomes dangerous when the surrounding system gives the model powers or data it should not have. The defense is to keep the model's inputs and powers small: retrieval limited to what the user may see, no tools that act on behalf of the user unless necessary, and confirmation for sensitive actions. The <a href="../LLM/threat-model-ai-document-platform.html">AI document platform threat model</a> goes deeper on this chain.</p>
+
+  <h2>9. A review checklist</h2>
+  <ul class="check">
+    <li>Is the tenant and user identity taken only from verified tokens, on every path (API, jobs, caches, exports)?</li>
+    <li>Is tenant filtering applied on every retrieval path, and is <code>tenant_id</code> set from trusted data when chunks are written?</li>
+    <li>Does every endpoint that takes an ID check the caller's right to that object?</li>
+    <li>Does the worker re-authorize before using a credential, and treat queue messages as input?</li>
+    <li>How many tenants' tokens can one worker or one key unlock? Can that be narrowed?</li>
+    <li>Do OAuth flows use <code>state</code> bound to the session, plus PKCE, strict redirect URIs and single-use codes?</li>
+    <li>Who is allowed to create organization-wide data sources, and is that approval separate from OAuth consent?</li>
+    <li>Is the requested scope the narrowest that works, and can users choose what is indexed?</li>
+    <li>What happens on disconnect, user removal and token revocation, for tokens, chunks and caches?</li>
+    <li>What can retrieved content make the model do, and what tools or data can it reach?</li>
+  </ul>
+  <p>Two further topics deserve their own deep dive, because the bugs are subtle and the impact is high: permissions that change after content is synced, cached AI answers, and long-running jobs that outlive the authorization that started them. They are covered in the companion post, <a href="stale-authorization-revocation-cache-export.html">When Authorization Goes Stale</a>.</p>
+
+  <h2>10. Things that sound safe but are not</h2>
+  <ul>
+    <li><strong>"We use Google's OAuth, so it is secure."</strong> Google secures its side. Binding the flow to the right user and deciding who may add a data source are your job.</li>
+    <li><strong>"The user is authenticated."</strong> That says who they are, not that they may use this connection.</li>
+    <li><strong>"Tokens are encrypted at rest."</strong> It protects a stolen disk. A compromised worker holds the key.</li>
+    <li><strong>"The database stores the tenant, so indexing is safe."</strong> It helps with disclosure, but the unauthorized job still runs.</li>
+    <li><strong>"We have state and PKCE."</strong> They protect the flow. They do not decide who may register a shared source.</li>
+    <li><strong>"The user clicked Allow."</strong> Consent covers access. It does not justify indexing everything for everyone indefinitely.</li>
+    <li><strong>"The AI filters it."</strong> The model is not an access control. Enforcement happens before the model sees anything.</li>
+  </ul>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>Start a review by asking where each identity comes from, where data flows, and what background jobs carry and re-check.</li>
+    <li>For each finding, separate what is <strong>proven</strong> from what <strong>depends on another weakness</strong>. An unauthorized sync job is not automatically a data leak.</li>
+    <li>Semantic search does not bypass a database-enforced tenant filter. Check every retrieval path and how metadata is written.</li>
+    <li>Authorize in both the API and the worker, before a credential is used, and shrink what one worker can decrypt.</li>
+    <li>Use <code>state</code> and PKCE to protect the OAuth flow, and remember that a correct flow still does not decide who may add an organization-wide data source.</li>
+    <li>Ask for narrow scopes, let users choose what is indexed, and make disconnect delete data and revoke tokens.</li>
+    <li>Treat document contents as untrusted, and limit what retrieved text can make the AI do.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth" target="_blank" rel="noopener">Google Drive API: choose the right scopes (drive.file, drive.readonly)</a></li>
+    <li><a href="https://developers.google.com/identity/protocols/oauth2/web-server" target="_blank" rel="noopener">Google: OAuth 2.0 for web server applications (state, offline access, refresh tokens)</a></li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc9700.html" target="_blank" rel="noopener">RFC 9700: Best Current Practice for OAuth 2.0 Security</a></li>
+    <li><a href="https://www.rfc-editor.org/rfc/rfc7636.html" target="_blank" rel="noopener">RFC 7636: Proof Key for Code Exchange (PKCE)</a></li>
+    <li><a href="https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization" target="_blank" rel="noopener">OWASP API Security Top 10: Broken Object Level Authorization</a></li>
+  </ul>
+
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Examples are simplified. Library behavior and AWS defaults change, so check current documentation and test on your own versions.
+    More notes: <a href="stale-authorization-revocation-cache-export.html">When authorization goes stale</a> · <a href="broken-access-control-idor.html">Broken access control</a> · <a href="../LLM/threat-model-ai-document-platform.html">AI document platform threat model</a>
+  </footer>
+</div>
+</body>
+</html>

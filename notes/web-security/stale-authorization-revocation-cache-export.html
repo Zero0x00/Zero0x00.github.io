@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>When Authorization Goes Stale: Revocation, AI Answer Caches and Async Exports | Mohammad Arif</title>
+  <meta name="description" content="Why copies, caches and queued jobs keep old permission decisions alive, how to fix revocation drift, answer caching and export races, and how to rate their severity with evidence." />
+  <meta name="author" content="Mohammad Arif" />
+  <link rel="canonical" href="https://mohdarif.com/notes/web-security/stale-authorization-revocation-cache-export.html" />
+  <meta property="og:title" content="When Authorization Goes Stale: Revocation, AI Answer Caches and Async Exports" />
+  <meta property="og:description" content="Why copies, caches and queued jobs keep old permission decisions alive, how to fix revocation drift, answer caching and export races, and how to rate their severity with evidence." />
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="https://mohdarif.com/og-image.png" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg: #0b1120; --text: #e5e7eb; --muted: #9ca3af; --line: rgba(148,163,184,.28);
+      --accent: #38bdf8; --accent2: #a78bfa; --good: #34d399; --bad: #fb7185; --warn: #fbbf24; --code: #050816;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text); font-family: var(--sans); line-height: 1.75; font-size: 1.05rem;
+      background: radial-gradient(circle at 15% 0%, rgba(56,189,248,.16), transparent 26rem),
+                  radial-gradient(circle at 85% 0%, rgba(167,139,250,.13), transparent 24rem), var(--bg);
+    }
+    a { color: #7dd3fc; }
+    .wrap { max-width: 780px; margin: 0 auto; padding: 28px 20px 70px; }
+    .back { font-size: .9rem; text-decoration: none; color: var(--muted); }
+    .back:hover { color: #fff; }
+    header { margin: 34px 0 30px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+    .eyebrow { color: var(--accent); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .76rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; letter-spacing: -.03em; margin: 10px 0 14px; }
+    .sub { color: #cbd5e1; font-size: 1.15rem; margin: 0 0 14px; }
+    .byline { color: var(--muted); font-size: .88rem; }
+    h2 { font-size: 1.6rem; letter-spacing: -.02em; margin: 2.8rem 0 .6rem; line-height: 1.25; }
+    h3 { font-size: 1.12rem; margin: 1.8rem 0 .2rem; color: #fff; }
+    p { margin: .7rem 0; color: #d1d5db; }
+    code { font-family: var(--mono); font-size: .88em; background: rgba(148,163,184,.15); padding: 2px 6px; border-radius: 5px; color: #e0f2fe; }
+    pre { background: var(--code); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; overflow-x: auto; line-height: 1.6; margin: 1rem 0; }
+    pre code { background: none; padding: 0; font-size: .85rem; color: #dbeafe; }
+    .box { border-left: 4px solid var(--accent); background: rgba(56,189,248,.08); padding: 14px 18px; border-radius: 0 12px 12px 0; margin: 1.3rem 0; }
+    .box p { margin: .3rem 0; }
+    .box strong { color: #fff; }
+    ol, ul { padding-left: 1.3rem; } li { margin: .4rem 0; color: #d1d5db; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: #fff; }
+    .tbl { overflow-x: auto; }
+    h3 .id { color: var(--accent); font-family: var(--mono); font-size: .85em; margin-right: 8px; }
+    h4 { font-size: .78rem; margin: 1.1rem 0 .1rem; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; }
+    .tag { display:inline-block; font-size:.7rem; font-weight:800; letter-spacing:.06em; padding:1px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; border:1px solid var(--line); color:var(--muted); }
+    .tag.crit { color:#fb7185; border-color:#fb7185; } .tag.high { color:#fbbf24; border-color:#fbbf24; } .tag.med { color:#7dd3fc; border-color:#7dd3fc; }
+    .check { padding-left: 0; } .check li { list-style: none; }
+    .check li::before { content: "☐ "; color: var(--accent); }
+
+    figure { margin: 1.6rem 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: rgba(5,8,22,.55); }
+    figure svg { display: block; width: 100%; height: auto; }
+    figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; line-height: 1.5; }
+    svg text { fill: var(--text); font-family: var(--sans); font-size: 13px; }
+    svg .t-s { font-size: 11px; fill: #cbd5e1; }
+    svg .t-h { font-size: 11px; font-weight: 800; letter-spacing: .1em; fill: var(--accent); }
+    svg .t-b { font-weight: 700; }
+    svg .n { fill: #111b2e; stroke: rgba(148,163,184,.5); stroke-width: 1.2; }
+    svg .hl { fill: rgba(56,189,248,.14); stroke: var(--accent); stroke-width: 1.6; }
+    svg .pod { fill: rgba(167,139,250,.14); stroke: var(--accent2); stroke-width: 1.3; }
+    svg .risk { fill: rgba(251,113,133,.12); stroke: var(--bad); stroke-width: 1.2; }
+    svg .ok { fill: rgba(52,211,153,.12); stroke: var(--good); stroke-width: 1.2; }
+    svg .ln { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+    svg .ar { fill: #94a3b8; }
+    footer { margin-top: 3rem; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 600px) { body { font-size: 1rem; } }
+  </style>
+  <meta property="article:published_time" content="2026-11-13" />
+  <meta property="article:modified_time" content="2026-11-13" />
+  <meta property="article:author" content="https://mohdarif.com/" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "When Authorization Goes Stale: Revocation, AI Answer Caches and Async Exports",
+  "description": "Why copies, caches and queued jobs keep old permission decisions alive, how to fix revocation drift, answer caching and export races, and how to rate their severity with evidence.",
+  "url": "https://mohdarif.com/notes/web-security/stale-authorization-revocation-cache-export.html",
+  "mainEntityOfPage": "https://mohdarif.com/notes/web-security/stale-authorization-revocation-cache-export.html",
+  "datePublished": "2026-11-13",
+  "dateModified": "2026-11-13",
+  "inLanguage": "en-US",
+  "image": "https://mohdarif.com/og-image.png",
+  "author": {
+    "@type": "Person",
+    "@id": "https://mohdarif.com/#person",
+    "name": "Mohammad Arif",
+    "url": "https://mohdarif.com/"
+  },
+  "publisher": {
+    "@id": "https://mohdarif.com/#person"
+  },
+  "isPartOf": {
+    "@id": "https://mohdarif.com/notes/#blog"
+  },
+  "articleSection": "Web & API security",
+  "keywords": [
+    "authorization drift",
+    "TOCTOU",
+    "permission revocation",
+    "AI answer cache",
+    "async export authorization",
+    "presigned URL",
+    "vulnerability severity",
+    "product security",
+    "application security"
+  ]
+}
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← mohdarif.com</a> · <a class="back" href="/notes/">All notes</a>
+
+  <header>
+    <div class="eyebrow">Product Security · Authorization</div>
+    <h1>When Authorization Goes Stale: Revocation, AI Answer Caches and Async Exports</h1>
+    <p class="sub">A permission check is a snapshot. This post follows three bugs where the snapshot outlived the permission, and shows how to fix them and how to rate them.</p>
+    <div class="byline">By Mohammad Arif · 17 min read</div>
+  </header>
+
+  <p>This post is for developers and security engineers who build features that copy, cache or queue data: search indexes, AI answers, exports, background jobs. You do not need to have read the companion post, <a href="google-drive-ai-integration-security-review.html">Reviewing a Google Drive Integration</a>, though it sets up the product we use as an example: a multi-tenant SaaS app that syncs a customer's Google Drive and offers AI search over it. We take three bugs in turn. They look unrelated, and they share one cause. After the third, we look at how to decide how serious a bug like this really is.</p>
+
+  <h2>1. The idea: a permission check is a snapshot</h2>
+  <p>When code asks "may this user read this document?", the answer is true <em>at that moment</em>. Permissions change: someone is removed from a folder, an employee leaves, a share is revoked. Any copy of the data, any saved result and any queued job keeps working from the answer it had earlier.</p>
+  <p>Security people call the general problem <strong>TOCTOU</strong>, short for "time of check, time of use". You check a condition, then act on it later, and the condition changed in between. In this post the condition is always "is this user allowed?". The related term <strong>authorization drift</strong> means the permissions your system believes in slowly differ from the real ones.</p>
+  <p>Our three examples differ in where the old answer is stored:</p>
+  <ul>
+    <li>In a <strong>search index</strong>, as copied content plus a stale idea of who can see it.</li>
+    <li>In a <strong>cache</strong>, as a saved AI answer that anyone with the same question can fetch.</li>
+    <li>In a <strong>queued job and its output</strong>, as a task that runs long after the user was checked.</li>
+  </ul>
+
+  <h2>2. Problem one: access removed in Google Drive, still searchable in the SaaS</h2>
+  <p>The platform copies Google Drive documents every six hours and indexes them for AI search. Consider this timeline:</p>
+  <ul>
+    <li>9:00 AM: Alice can open a confidential document in Google Drive. The platform syncs it and indexes the content.</li>
+    <li>10:00 AM: the document's owner removes Alice's access in Google Drive.</li>
+    <li>10:30 AM: Alice searches in the SaaS app. The AI retrieves the indexed content and summarizes it for her.</li>
+  </ul>
+  <p>The engineering manager says: "The next sync is at 3:00 PM and will update the permissions. A few hours is fine, because we are not reading from Google Drive anymore." The root cause is that the platform holds a <strong>copy of the document and a copy of who may read it</strong>, and the copy of the permissions is out of date. The boundary that matters is between Google's current authorization state and the one the SaaS cached. "We synced it earlier" does not justify access now, because the permission Alice had at 9:00 AM was a decision about 9:00 AM.</p>
+
+  <h3>Two different things changed, and only one of them is content</h3>
+  <p>It is tempting to say "just re-sync more often" or "re-index the document". Look at what actually changed: the <em>content</em> of the document did not, but its <em>access list</em> did.</p>
+  <div class="tbl"><table>
+    <tr><th></th><th>Document content</th><th>Document permissions</th></tr>
+    <tr><td>What it is</td><td>What the document says</td><td>Who may read it</td></tr>
+    <tr><td>Changed at 10:00 AM?</td><td>No</td><td>Yes, Alice was removed</td></tr>
+    <tr><td>Fixed by re-indexing the content?</td><td>Not needed</td><td>No. Re-indexing does not change who may see it</td></tr>
+  </table></div>
+  <p>The document also still exists and other people may still have access to it. So the answer is not "delete it from the index". The platform has to update <strong>who may retrieve</strong> the content, which is a separate piece of data from the content itself.</p>
+
+  <h3>A design that handles it</h3>
+  <p>Use three separate mechanisms:</p>
+  <ol>
+    <li><strong>Detect changes.</strong> Google Drive offers a change feed (<code>changes.list</code>) and push notifications (<code>changes.watch</code>). Be careful with what notifications are. Google's documentation says they carry no content or metadata, only a signal that something changed, so you must call the API to find out what. Notification channels also expire (up to one week for changes) and must be recreated, so run a regular reconciliation too, in case a notification was missed.</li>
+    <li><strong>Store permissions separately from content.</strong> Keep a local copy of each document's access list. Update it from the change feed on its own schedule, without re-indexing content. When it changes, invalidate caches that depended on it.</li>
+    <li><strong>Enforce at retrieval time.</strong> Before any retrieved chunk goes to the AI model or back to the user, check that this user may <em>currently</em> read that document, using the local permission copy. For especially sensitive documents, require fresher evidence, or fail closed: if the platform cannot tell whether access is still allowed, it does not show the content.</li>
+  </ol>
+  <p>Keep three timestamps in mind: when the content was last synced, when permissions were last verified, and whether any change is pending. They are different facts.</p>
+
+  <h3>A complication that decides the design: can you see the permissions at all?</h3>
+  <p>The platform connects with one Google account's credentials. To reason about <em>other users'</em> access, it needs the document's full access list, and Google does not always provide it. In the Drive API, a file's <code>permissions</code> list is only available if the requesting user can share the file, and it is not populated for items in shared drives. So a read-only integration account may not be able to see who else has access.</p>
+  <p>Mapping is another problem: Drive permissions are written in terms of Google accounts, groups and domains, while the SaaS has its own users. Matching them reliably means linking each SaaS user to a Google identity. This means "check Google permissions at retrieval" is a design with real work behind it. Options include connecting with each user's own account (so a check uses their own access), using an administrator-level integration that can read permissions, and indexing only documents whose permissions the integration can see. Whichever you choose, decide what happens when the answer is unknown. The safe default is to hide the document.</p>
+
+  <h3>Choosing between the options</h3>
+  <div class="tbl"><table>
+    <tr><th>Approach</th><th>Good</th><th>Limit</th></tr>
+    <tr><td>Sync every 15 minutes</td><td>Simple</td><td>Permissions can be about 15 minutes stale, plus processing delay</td></tr>
+    <tr><td>Drive change notifications</td><td>Much faster detection</td><td>Not an instant guarantee. Signals only, with expiry, so reconciliation is still needed</td></tr>
+    <tr><td>Check Google permissions on every search</td><td>Freshest answer</td><td>Adds latency, uses API quota and makes search depend on Google being up</td></tr>
+    <tr><td>Local permission copy plus change feed</td><td>Fast search that scales</td><td>You must keep the copy consistent and reconcile it</td></tr>
+    <tr><td>Fail closed when freshness is unknown</td><td>No access on uncertain data</td><td>Search may be briefly unavailable</td></tr>
+  </table></div>
+  <p>My usual choice is a local permission copy kept current with the change feed, enforced at retrieval time, with stricter freshness rules for sensitive documents. Whatever you pick, write down the maximum acceptable revocation delay and what happens when Google is unreachable. "How fast must a revoke take effect?" is a product question, and the technical design should answer it with a number.</p>
+  <p><strong>Is it a release blocker?</strong> Not just because the sync interval is six hours. The questions that decide it: how confidential are the documents, can one user see content another user is no longer allowed to see, how many customers are affected, how long is the exposure, did customers expect revocation to propagate promptly, and what other controls exist. For an enterprise AI search product over confidential files, launching without retrieval-time authorization and a defined revocation mechanism is something I would push hard against.</p>
+
+  <h2>3. Problem two: an answer cache that skips the check</h2>
+  <p>The team now enforces authorization before sending chunks to the model. Then someone adds a cache to save money:</p>
+<pre><code>def answer_question(user, question):
+    cache_key = hash(question)
+    cached_answer = redis.get(cache_key)
+    if cached_answer:
+        return cached_answer
+
+    chunks = vector_db.search(question)
+    authorized_chunks = [c for c in chunks if can_access(user, c.document_id)]
+    answer = llm.generate(question, authorized_chunks)
+    redis.setex(cache_key, 3600, answer)
+    return answer</code></pre>
+  <p>The developer says: "We check authorization before generating answers, and the cache only lasts an hour, so this is secure." Look at the cache key: <code>hash(question)</code>. It contains nothing about <em>who</em> asked.</p>
+
+  <figure><svg viewBox="0 0 760 170" role="img" aria-label="Three steps: Alice from tenant A asks a question and the answer is cached under a key based only on the question; Bob from tenant B asks the same question and produces the same key; the cache hit returns Alice's answer to Bob without any authorization check."><defs><marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ar"/></marker></defs><rect class="n" x="20" y="25" width="210" height="115" rx="10"/><text x="125" y="51" text-anchor="middle" class="t-b">1. Alice, Tenant A, asks</text><text x="125" y="75" text-anchor="middle" class="t-s">about annual revenue</text><text x="125" y="93" text-anchor="middle" class="t-s">retrieval uses A's documents</text><text x="125" y="115" text-anchor="middle" class="t-s">answer cached under hash(question)</text><rect class="n" x="275" y="25" width="210" height="115" rx="10"/><text x="380" y="51" text-anchor="middle" class="t-b">2. Bob, Tenant B, asks</text><text x="380" y="75" text-anchor="middle" class="t-s">the same question</text><text x="380" y="93" text-anchor="middle" class="t-s">hash(question) is the same key</text><rect class="risk" x="530" y="25" width="210" height="115" rx="10"/><text x="635" y="51" text-anchor="middle" class="t-b">3. Cache hit</text><text x="635" y="75" text-anchor="middle" class="t-s">Bob receives Alice's answer</text><text x="635" y="93" text-anchor="middle" class="t-s">no authorization check runs</text><path class="ln" d="M230 82H275" marker-end="url(#c1)"/><path class="ln" d="M485 82H530" marker-end="url(#c1)"/></svg><figcaption>Figure 1. Same question, different people, one cache entry. No revocation is needed for this to leak.</figcaption></figure>
+
+  <p>The authorization check only runs on a cache <strong>miss</strong>. On a hit, the saved answer is returned directly. An optimization silently removed the control. Notice that this needs no permission change at all: two users asking the same question is enough. Answers are not like public web pages. An answer built from Tenant A's confidential documents is only fit for people who can read those documents.</p>
+
+  <h3>Why "add the tenant to the key" is not enough</h3>
+  <p>Putting <code>tenant_id</code> in the key stops cross-tenant leaks, but two users in the same tenant can still have different document access. A manager's answer about salaries should not be served to someone in a different team. Here are the options:</p>
+  <div class="tbl"><table>
+    <tr><th>Cache key</th><th>Result</th></tr>
+    <tr><td>Question only</td><td>Unsafe for any answer that depends on permissions</td></tr>
+    <tr><td>Tenant and question</td><td>Fixes cross-tenant leaks. Still unsafe when people in one tenant see different documents</td></tr>
+    <tr><td>User, tenant and question</td><td>Good isolation, but a cached answer can still outlive a revoked permission</td></tr>
+    <tr><td>Permission context plus source document versions</td><td>Allows safe reuse, but needs reliable invalidation</td></tr>
+    <tr><td>No caching for sensitive answers</td><td>Simplest model, costs more per request</td></tr>
+  </table></div>
+  <p>For a first safe version I would cache per user and tenant with a short lifetime, and not share entries between users until the design is tested. Store, with each cached answer, the list of source documents (and their versions) it was built from. On every cache hit, check that the user can <em>still</em> read all of those documents, and drop the entry when any permission or document changes. Checking only one document is not enough, because an answer can combine several.</p>
+  <p>A note on retrieval order. Fetching candidate chunks before checking authorization is not a leak by itself. What matters is whether unauthorized content ever reaches the model or the user. A sound design either searches only within an already-authorized set or filters the candidates before any content is used.</p>
+  <p><strong>Tests:</strong> Alice asks twice (reuse is fine). Bob from another tenant asks the same question (must not get Alice's answer). Bob from the same tenant without access asks (must not get restricted content). Revoke Alice's access after caching (the cached answer must not bypass it). Change a source document (the old answer must be invalidated or versioned). Take the cache offline (the system must fall back safely, not skip checks).</p>
+
+  <h2>4. Problem three: a job that outlives the check</h2>
+  <p>Users can export confidential documents. Exports can be huge, so they run in the background:</p>
+<pre><code>@app.post("/api/exports")
+def create_export(request):
+    user = validate_jwt(request.headers["Authorization"])
+    document_ids = request.json["document_ids"]
+    for document_id in document_ids:
+        if not can_access(user, document_id):
+            raise Forbidden()
+    job_id = queue.publish({"user_id": user.id, "document_ids": document_ids})
+    return {"job_id": job_id}
+
+def process_export(job):
+    documents = database.get_documents(job["document_ids"])
+    archive = create_zip(documents)
+    url = upload_archive_to_s3(archive)
+    notify_user(job["user_id"], url)</code></pre>
+  <p>The developer says: "We verify authorization for every document before queueing, and the worker only processes approved IDs, so it is secure." Now picture Alice requesting an export of 100 confidential documents at 10:00 AM. At 10:01 her access to 20 of them is revoked. At 10:05 the worker runs.</p>
+
+  <figure><svg viewBox="0 0 760 245" role="img" aria-label="Timeline: at 10:00 the API checks all 100 documents and queues a job; at 10:01 access to 20 documents is revoked; at 10:05 the worker packages all 100 documents into a ZIP and uploads it with a 24 hour URL, without any second check."><path class="ln" d="M40 70H720"/><circle cx="120" cy="70" r="6" class="ar"/><circle cx="360" cy="70" r="6" class="ar"/><circle cx="600" cy="70" r="6" class="ar"/><text x="120" y="48" text-anchor="middle" class="t-h">10:00</text><text x="360" y="48" text-anchor="middle" class="t-h">10:01</text><text x="600" y="48" text-anchor="middle" class="t-h">10:05</text><rect class="ok" x="20" y="100" width="200" height="120" rx="10"/><text x="120" y="126" text-anchor="middle" class="t-b">Request</text><text x="120" y="150" text-anchor="middle" class="t-s">API checks all 100 documents</text><text x="120" y="168" text-anchor="middle" class="t-s">All allowed, job is queued</text><rect class="hl" x="260" y="100" width="200" height="120" rx="10"/><text x="360" y="126" text-anchor="middle" class="t-b">Revoke</text><text x="360" y="150" text-anchor="middle" class="t-s">Access to 20 documents</text><text x="360" y="168" text-anchor="middle" class="t-s">is removed. The queued job</text><text x="360" y="186" text-anchor="middle" class="t-s">still lists all 100</text><rect class="risk" x="500" y="100" width="200" height="120" rx="10"/><text x="600" y="126" text-anchor="middle" class="t-b">Worker runs</text><text x="600" y="150" text-anchor="middle" class="t-s">Reads all 100 documents</text><text x="600" y="168" text-anchor="middle" class="t-s">No second check</text><text x="600" y="186" text-anchor="middle" class="t-s">ZIP and a 24 hour URL</text></svg><figcaption>Figure 2. The check happens once, at the start. The data is packaged later, under a different set of permissions.</figcaption></figure>
+
+  <p>The root cause is the gap between <strong>authorization at request time</strong> and <strong>authorization at execution time</strong>. When the API checks Alice, the decision is about Alice. When the worker runs, it uses the worker's own broad database access, which says nothing about whether Alice may still read these documents. The trust boundary that changes is the one between the API and the worker.</p>
+
+  <h3>"Check each file as the worker reads it" is better, not complete</h3>
+  <p>A natural improvement is to check access right before each file is added to the ZIP. That shrinks the window, but does not close it:</p>
+  <ul>
+    <li>10:05:00: the worker checks document 50. Alice is allowed.</li>
+    <li>10:05:01: the worker starts reading it.</li>
+    <li>10:05:02: the owner revokes Alice's access.</li>
+    <li>10:05:10: the export finishes, and the ZIP contains document 50.</li>
+  </ul>
+  <p>The check is still a snapshot. So before designing a fix, decide which promise the product makes. Does revocation need to be respected at the time of the request, when each file is read, when the export is complete, or when the user downloads it? These are four different policies, and the engineering team has to choose one on purpose.</p>
+
+  <h3>A layered design</h3>
+  <ol>
+    <li><strong>API check.</strong> Authenticate the user, validate the document list and authorize the export action.</li>
+    <li><strong>Worker re-check.</strong> Look up the trusted job record (not just the message), confirm the requester and the export are still valid, and fetch only the documents they may read. A database-level filter (such as row-level security scoped to the requester) can enforce this even if the worker code has a bug.</li>
+    <li><strong>Detect changes during the job.</strong> Record a permission version when authorization is checked. If a relevant permission changes before the job finishes, cancel it or rebuild it.</li>
+    <li><strong>Check again before publishing.</strong> Confirm the document set is still authorized and the permission versions are unchanged. If not, discard the archive.</li>
+    <li><strong>Control the download.</strong> Keep the ZIP private, and make access to it a separate authorized action.</li>
+  </ol>
+  <p>Even a final check has a gap before the user actually downloads. If revocation must apply to every new download, check authorization again at download time. For very strict requirements the revoke and the download need to coordinate through locking or other transactional means. And once a file has been downloaded, nothing can recall it. Which of these you need is a risk decision, not a technical default.</p>
+
+  <h3>The archive and its link are part of the design</h3>
+  <p>The worker uploads the ZIP to S3 and tells the user. Questions to ask about that last step:</p>
+  <ul>
+    <li><strong>Is the ZIP private and encrypted?</strong> It may hold thousands of confidential files, so keep access tight.</li>
+    <li><strong>What is the link?</strong> A presigned URL is a bearer token: it works for anyone who holds it, until it expires or the credentials that signed it stop working. Removing a user in your application does not cancel a URL that has already been issued. The <a href="../aws-security/s3-presigned-url-revocation.html">presigned URL post</a> covers this in detail. A 24-hour link is a long window.</li>
+    <li><strong>Who may fetch it?</strong> The download endpoint must tie the export to the requester. Do not trust a <code>job_id</code> or object key the client sends.</li>
+    <li><strong>How long does it live?</strong> Set a retention period and delete archives afterwards.</li>
+    <li><strong>What goes in the notification?</strong> Email with a working link can be forwarded or read by someone else. For sensitive exports, notify "your export is ready" and require the user to sign in, pass a current authorization check, and then receive a short-lived link.</li>
+  </ul>
+  <p>Also connect the lifecycle: when an employee is deprovisioned, cancel their pending jobs and invalidate unredeemed export links.</p>
+
+  <h2>5. How serious is it? Rating severity with evidence</h2>
+  <p>Suppose you report the export problem and the engineering manager disagrees:</p>
+  <div class="box"><p>"A user can only request an export for documents they are already allowed to see. The attack needs someone to revoke access while the job is running, which is an unlikely race. The ZIP is in a private S3 bucket. This is not high severity."</p></div>
+  <p>Your job is to turn that argument into facts. You investigate and find:</p>
+  <ul>
+    <li>Export jobs can wait in the queue for up to 30 minutes.</li>
+    <li>Some exports hold thousands of confidential financial and legal documents.</li>
+    <li>The API checks permissions only when the export is requested. The worker does not check again.</li>
+    <li>Archives stay downloadable for 24 hours through presigned URLs.</li>
+    <li>People request exports shortly before leaving the organization.</li>
+  </ul>
+
+  <h3>Theoretical race or practical attack?</h3>
+  <p>The "unlikely race" argument assumes a window of milliseconds. Here the window is up to 30 minutes in the queue, followed by a 24-hour link. And the trigger is not an unusual coincidence: it is a normal business event. Someone who is leaving requests an export, and their access is removed as part of offboarding. No special skill is needed. That moves it from "a race we hope never happens" to "a scenario that matches how people actually leave companies".</p>
+  <p>The private bucket does not change this, because the link is the key. A presigned URL grants access to whoever holds it, regardless of the bucket's privacy.</p>
+
+  <h3>What I would say about severity, and what I would not</h3>
+  <p>It is tempting to answer "critical" at once. A more careful position is that the evidence so far shows a <strong>potentially high-impact authorization flaw</strong>: the worker lacks a second check, and the delivery link outlives permission changes. It does not yet prove every step needed for a revoked person to actually obtain the data. For example, a user who legitimately downloaded files before revocation is not exploiting this flaw. Whether the person can still get the link after losing access depends on how the link is delivered: to an external email address, through an app session that ends at offboarding, or with the job cancelled during deprovisioning.</p>
+  <p>So I would call it <strong>potentially High</strong>, and raise it to Critical once reproduced if it reliably exposes regulated or highly sensitive data to a former user. The evidence to gather, in a staging environment with synthetic documents:</p>
+  <ol>
+    <li>Sign in as Alice and request an export of confidential synthetic documents.</li>
+    <li>While the job is queued, revoke Alice's permissions (and, as a second run, deactivate her account).</li>
+    <li>Check whether the worker still builds the archive.</li>
+    <li>Check whether Alice can obtain the download URL after losing access, and by which route (email, notification, API).</li>
+    <li>Try the download using whatever access path a former user would still have, and record the result.</li>
+  </ol>
+  <p>If all five steps work, you have strong evidence of a practical post-revocation disclosure.</p>
+
+  <h3>The factors behind a rating</h3>
+  <div class="tbl"><table>
+    <tr><th>Factor</th><th>Question to answer</th><th>Here</th></tr>
+    <tr><td>Exploitability</td><td>Who can do it, with what prerequisites, in what window?</td><td>Any user with export rights, up to 30 minutes plus a 24 hour link</td></tr>
+    <tr><td>Impact</td><td>How sensitive is the data, and how much?</td><td>Financial and legal documents, personal data, thousands of files</td></tr>
+    <tr><td>Scope</td><td>One user or many customers?</td><td>Any customer using exports</td></tr>
+    <tr><td>Realism</td><td>Does it match a normal event?</td><td>Yes, offboarding</td></tr>
+    <tr><td>Detection</td><td>Would you notice it?</td><td>Likely not, since it looks like a normal export</td></tr>
+    <tr><td>Compensating controls</td><td>What else limits it?</td><td>Not established yet. Check.</td></tr>
+    <tr><td>Fix cost</td><td>How hard is a real fix?</td><td>Moderate: re-check, versioning, controlled download</td></tr>
+  </table></div>
+
+  <h3>Containment if the full fix cannot ship</h3>
+  <p>Disabling exports is a valid answer, but a good reviewer offers narrower choices as well, so product leaders can pick the least disruptive safe one:</p>
+  <div class="tbl"><table>
+    <tr><th>Mitigation</th><th>What it reduces</th><th>Cost</th></tr>
+    <tr><td>Disable exports temporarily</td><td>Everything, if every export path is covered</td><td>The feature is gone</td></tr>
+    <tr><td>Cancel queued jobs when access is revoked or the user is deprovisioned</td><td>Many stale jobs</td><td>Needs reliable revocation events</td></tr>
+    <tr><td>Re-check at job start and again before delivery</td><td>Stale authorization at both ends</td><td>Engineering work</td></tr>
+    <tr><td>Stop emailing direct presigned URLs. Use an authenticated, short-lived download</td><td>The 24 hour window</td><td>Some infrastructure and UX work</td></tr>
+    <tr><td>Exclude the most sensitive document classes from export</td><td>Worst-case impact</td><td>Reduced export features</td></tr>
+  </table></div>
+  <p>For this data I would require a mitigation that <em>prevents</em> the problem before launch, not only monitoring after the fact. If no narrow control can be built and verified in time, disabling the export is justified.</p>
+  <p>How I would put it to product leadership: "The export workflow relies on an authorization check done up to 30 minutes before the data is packaged, and the delivery link is valid for 24 hours. A user who is losing access could request an export while allowed, then keep the result after being removed. I am treating this as potentially high severity and will confirm by reproducing the full flow. Because the documents are financial and legal, I need a preventive control before launch. The best fix is a re-check at execution and delivery, cancelling stale jobs, and authenticated downloads. If we cannot do that safely in time, I recommend turning exports off until we can."</p>
+
+  <h2>6. One checklist for all three</h2>
+  <ul class="check">
+    <li>List every place a permission decision is saved: indexes, caches, queued jobs, tokens, URLs. For each, ask how it learns about a revoke.</li>
+    <li>Separate content from permissions in anything you copy. Update them independently.</li>
+    <li>Enforce authorization when data is <em>used</em> (retrieved, returned, packaged, downloaded), not only when it was first requested.</li>
+    <li>Never let a cache or an optimization return data without the same authorization a fresh request would need.</li>
+    <li>Treat queue messages as input. Re-check in the worker before the sensitive step.</li>
+    <li>Decide the maximum revocation delay, and what happens when permission state is unknown (fail closed).</li>
+    <li>Test the revoke: grant, use, revoke, then try again through every saved copy (search, cached answer, queued job, old link).</li>
+    <li>Rate bugs by evidence: reproduce the full path, then say what is established and what is not.</li>
+  </ul>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>A permission check describes one moment. Copies, caches, queued jobs and links keep working from older decisions unless you make them re-check.</li>
+    <li>For synced data, content and permissions are separate. Keep a local permission copy, update it from change feeds, and enforce at retrieval time, failing closed when unsure. Check whether your integration can actually see the permissions you need.</li>
+    <li>A cache that skips authorization on a hit is an access control bypass. Scope entries to the right user and context, record source documents, and re-verify on reuse.</li>
+    <li>Authorization at request time is not authorization at execution time. Re-check in the worker, detect changes during the job, check again before publishing, and control the download.</li>
+    <li>A presigned link is a bearer token. A private bucket does not make it safe, and revoking a user does not cancel it.</li>
+    <li>Rate severity with evidence. Reproduce the path, say what is established, and offer containment options so the team can act.</li>
+  </ul>
+
+  <h2>References</h2>
+  <ul>
+    <li><a href="https://developers.google.com/workspace/drive/api/guides/push" target="_blank" rel="noopener">Google Drive API: push notifications (channels carry no content and expire)</a></li>
+    <li><a href="https://developers.google.com/workspace/drive/api/reference/rest/v3/files" target="_blank" rel="noopener">Google Drive API: Files resource (the permissions field)</a></li>
+    <li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html" target="_blank" rel="noopener">AWS docs: Download and upload objects with presigned URLs</a></li>
+    <li><a href="https://cwe.mitre.org/data/definitions/367.html" target="_blank" rel="noopener">CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition</a></li>
+    <li><a href="https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization" target="_blank" rel="noopener">OWASP API Security Top 10: Broken Object Level Authorization</a></li>
+  </ul>
+
+
+  <footer>
+    By <a href="/">Mohammad Arif</a>. Examples are simplified. Library behavior and AWS defaults change, so check current documentation and test on your own versions.
+    More notes: <a href="google-drive-ai-integration-security-review.html">Reviewing a Google Drive integration</a> · <a href="../aws-security/s3-presigned-url-revocation.html">S3 presigned URLs</a> · <a href="broken-access-control-idor.html">Broken access control</a>
+  </footer>
+</div>
+</body>
+</html>
